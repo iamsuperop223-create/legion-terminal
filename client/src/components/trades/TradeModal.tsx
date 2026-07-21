@@ -146,7 +146,10 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   const getScreenshots = (): string[] => {
     if (!t.screenshotUrl) return [];
-    try { return JSON.parse(t.screenshotUrl); } catch { return [t.screenshotUrl]; }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    let urls: string[];
+    try { urls = JSON.parse(t.screenshotUrl); } catch { urls = [t.screenshotUrl]; }
+    return urls.map((u) => u.startsWith("http") ? u : `${apiUrl}${u}`);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
