@@ -70,7 +70,7 @@ model TradingAccount {
   userId      String
   name        String
   type        String   @default("sim") // eval | funded | sim
-  balance     Float    @default(10000)
+  balance     Float    @default(25000)
   currency    String   @default("USD")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

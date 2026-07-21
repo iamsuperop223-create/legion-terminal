@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { PlusCircle, ChevronDown, Settings, LogOut, X, Pencil } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
-import { fmt$ } from "@/types";
+import { fmt$, tradePnl } from "@/types";
 
 const ACCOUNT_BADGES: Record<string, { bg: string; fg: string }> = {
   eval: { bg: "bg-[#3A2E18]", fg: "text-[#D4A24E]" },
@@ -11,14 +11,20 @@ const ACCOUNT_BADGES: Record<string, { bg: string; fg: string }> = {
 };
 
 export default function TopBar({ onAddTrade }: { onAddTrade: () => void }) {
-  const { accounts, activeAccountId, setActiveAccount, createAccount, updateAccount, deleteAccount, loadTrades, loadRules } = useAppStore();
+  const { accounts, activeAccountId, trades, setActiveAccount, createAccount, updateAccount, deleteAccount, loadTrades, loadRules } = useAppStore();
   const { logout } = useAuthStore();
   const [showAccounts, setShowAccounts] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const activeAccount = accounts.find((a) => a.id === activeAccountId);
 
-  const totalPnl = 0;
+  const totalPnl = useMemo(() => {
+    return trades
+      .filter((t: any) => t.status === "closed")
+      .reduce((a: number, t: any) => a + tradePnl(t), 0);
+  }, [trades]);
+
+  const currentBalance = (activeAccount?.balance || 0) + totalPnl;
 
   return (
     <div className="h-[62px] border-b border-border flex items-center justify-between px-5 bg-bg flex-shrink-0">
@@ -84,11 +90,19 @@ export default function TopBar({ onAddTrade }: { onAddTrade: () => void }) {
           )}
         </div>
 
-        {/* All-Time PnL */}
-        <div>
-          <div className="text-[10px] text-[#5B6478] uppercase tracking-wider">All-Time PnL</div>
-          <div className={`font-mono font-bold text-sm ${totalPnl >= 0 ? "text-[#38D9A0]" : "text-[#F1685E]"}`}>
-            {fmt$(totalPnl)}
+        {/* All-Time PnL + Current Balance */}
+        <div className="flex gap-5">
+          <div>
+            <div className="text-[10px] text-[#5B6478] uppercase tracking-wider">All-Time PnL</div>
+            <div className={`font-mono font-bold text-sm ${totalPnl >= 0 ? "text-[#38D9A0]" : "text-[#F1685E]"}`}>
+              {fmt$(totalPnl)}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-[#5B6478] uppercase tracking-wider">Balance</div>
+            <div className="font-mono font-bold text-sm text-[#E7EAEF]">
+              {fmt$(currentBalance)}
+            </div>
           </div>
         </div>
       </div>
@@ -123,7 +137,7 @@ function AccountModal({ account, onClose }: { account?: any; onClose: () => void
   const { createAccount, updateAccount, deleteAccount, loadAccounts, setActiveAccount, loadTrades, loadRules } = useAppStore();
   const [name, setName] = useState(account?.name || "");
   const [type, setType] = useState(account?.type || "sim");
-  const [balance, setBalance] = useState(account?.balance?.toString() || "10000");
+  const [balance, setBalance] = useState(account?.balance?.toString() || "25000");
   const [loading, setLoading] = useState(false);
 
   const isEdit = !!account;
@@ -133,9 +147,9 @@ function AccountModal({ account, onClose }: { account?: any; onClose: () => void
     setLoading(true);
     try {
       if (isEdit) {
-        await updateAccount(account.id, { name: name.trim(), type, balance: Number(balance) || 10000 });
+        await updateAccount(account.id, { name: name.trim(), type, balance: Number(balance) || 25000 });
       } else {
-        const newAcc = await createAccount({ name: name.trim(), type, balance: Number(balance) || 10000 });
+        const newAcc = await createAccount({ name: name.trim(), type, balance: Number(balance) || 25000 });
       }
       await loadAccounts();
       onClose();

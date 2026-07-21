@@ -25,7 +25,7 @@ router.post("/", async (req: AuthRequest, res) => {
     const data = z.object({
       name: z.string().min(1),
       type: z.enum(["eval", "funded", "sim"]).default("sim"),
-      balance: z.number().positive().default(10000),
+      balance: z.number().positive().default(25000),
     }).parse(req.body);
 
     const prisma = req.prisma;

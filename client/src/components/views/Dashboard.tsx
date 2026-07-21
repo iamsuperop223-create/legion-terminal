@@ -9,12 +9,14 @@ interface Props {
 }
 
 export default function Dashboard({ onEdit }: Props) {
-  const { trades, rules } = useAppStore();
+  const { trades, rules, accounts, activeAccountId } = useAppStore();
+  const activeAccount = accounts.find((a) => a.id === activeAccountId);
   const closed = trades.filter((t) => t.status === "closed");
   const open = trades.filter((t) => t.status === "open");
   const wins = closed.filter((t) => tradePnl(t) > 0);
   const losses = closed.filter((t) => tradePnl(t) < 0);
   const totalPnl = closed.reduce((a, t) => a + tradePnl(t), 0);
+  const currentBalance = (activeAccount?.balance || 0) + totalPnl;
   const today = dayKey(new Date().toISOString());
   const pnlToday = closed
     .filter((t) => dayKey(t.exitTime || t.entryTime) === today)
@@ -33,6 +35,7 @@ export default function Dashboard({ onEdit }: Props) {
           <StatBox label="Losses" value={losses.length} tone="red" />
           <StatBox label="Open" value={open.length} />
           <StatBox label="Total PnL" value={fmt$(totalPnl)} tone={totalPnl >= 0 ? "green" : "red"} />
+          <StatBox label="Balance" value={fmt$(currentBalance)} />
           <StatBox label="Win rate" value={closed.length ? `${Math.round((wins.length / closed.length) * 100)}%` : "0%"} />
           <StatBox
             label="Avg win"
