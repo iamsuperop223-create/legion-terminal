@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useAppStore } from "@/stores/appStore";
-import { X, ShieldCheck, Check, AlertTriangle, Upload, Image } from "lucide-react";
+import { X, ShieldCheck, Check, AlertTriangle, Upload } from "lucide-react";
 import { SYMBOLS, uid } from "@/types";
 import { evaluateTradeRules, tradePnl, fmt$ } from "@/lib/tradeHelpers";
 import { api } from "@/lib/api";
@@ -59,6 +59,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
   );
   const [checked, setChecked] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const update = (k: string, v: any) => setT((prev: any) => ({ ...prev, [k]: v }));
@@ -110,13 +111,20 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return acc;
   }, {});
 
+  const getScreenshots = (): string[] => {
+    if (!t.screenshotUrl) return [];
+    try { return JSON.parse(t.screenshotUrl); } catch { return [t.screenshotUrl]; }
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("screenshot", file);
+      for (let i = 0; i < files.length; i++) {
+        formData.append("screenshots", files[i]);
+      }
       const token = api.getToken();
       const apiUrl = import.meta.env.VITE_API_URL || "";
       const res = await fetch(`${apiUrl}/api/trades/upload`, {
@@ -125,12 +133,20 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         body: formData,
       });
       const data = await res.json();
-      if (data.url) update("screenshotUrl", data.url);
+      if (data.urls) {
+        const existing = getScreenshots();
+        update("screenshotUrl", JSON.stringify([...existing, ...data.urls]));
+      }
     } catch (err) {
       console.error("Upload failed:", err);
     } finally {
       setUploading(false);
     }
+  };
+
+  const removeScreenshot = (idx: number) => {
+    const updated = getScreenshots().filter((_, i) => i !== idx);
+    update("screenshotUrl", updated.length ? JSON.stringify(updated) : null);
   };
 
   const submit = async () => {
@@ -272,24 +288,30 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
           </Row>
 
           {/* ── Screenshot ── */}
-          <SectionTitle>Screenshot</SectionTitle>
+          <SectionTitle>Screenshots</SectionTitle>
           <div className="flex items-center gap-3">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleUpload} className="hidden" />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className={`${pillCls} bg-[#1A2029] text-[#D4A24E] border border-[#8A6A38] flex items-center gap-2`}
             >
-              <Upload size={14} /> {uploading ? "Uploading..." : "Upload Screenshot"}
+              <Upload size={14} /> {uploading ? "Uploading..." : "Add Screenshot(s)"}
             </button>
-            {t.screenshotUrl && (
-              <div className="flex items-center gap-2">
-                <Image size={14} className="text-[#38D9A0]" />
-                <a href={t.screenshotUrl} target="_blank" className="text-xs text-[#38D9A0] underline">View</a>
-                <button onClick={() => update("screenshotUrl", null)} className="text-xs text-[#F1685E]">Remove</button>
-              </div>
-            )}
           </div>
+          {getScreenshots().length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {getScreenshots().map((url, idx) => (
+                <div key={idx} className="relative group border border-[#232B38] rounded-lg overflow-hidden cursor-pointer" onClick={() => setLightboxUrl(url)}>
+                  <img src={url} alt={`Screenshot ${idx + 1}`} className="w-full h-32 object-cover" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeScreenshot(idx); }}
+                    className="absolute top-1 right-1 bg-[#5C2A28] text-[#F1685E] text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* ── Notes & Analysis ── */}
           <SectionTitle>Notes & Analysis</SectionTitle>
@@ -394,6 +416,16 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
           <button onClick={onClose} className={`${pillCls} bg-transparent border border-[#232B38] text-[#8891A3]`}>Cancel</button>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center" onClick={() => setLightboxUrl(null)}>
+          <button onClick={() => setLightboxUrl(null)} className="absolute top-4 right-4 text-[#E7EAEF] hover:text-white transition">
+            <X size={32} />
+          </button>
+          <img src={lightboxUrl} alt="Screenshot" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

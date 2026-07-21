@@ -44,8 +44,11 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Serve uploads
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Ensure uploads directory exists
+import fs from "fs";
+const uploadsDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use("/uploads", express.static(uploadsDir));
 
 // In production, serve client build
 if (process.env.NODE_ENV === "production") {

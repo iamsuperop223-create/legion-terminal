@@ -84,14 +84,15 @@ router.get("/", async (req: AuthRequest, res) => {
   }
 });
 
-// Upload screenshot (MUST be before /:id routes)
-router.post("/upload", upload.single("screenshot"), (req: AuthRequest, res) => {
-  if (!req.file) {
-    res.status(400).json({ error: "No file uploaded" });
+// Upload screenshot(s) (MUST be before /:id routes)
+router.post("/upload", upload.array("screenshots", 20), (req: AuthRequest, res) => {
+  const files = req.files as Express.Multer.File[];
+  if (!files || files.length === 0) {
+    res.status(400).json({ error: "No files uploaded" });
     return;
   }
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url });
+  const urls = files.map((f) => `/uploads/${f.filename}`);
+  res.json({ urls });
 });
 
 // Get single trade
