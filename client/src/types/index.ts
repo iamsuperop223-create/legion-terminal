@@ -39,6 +39,7 @@ export interface Trade {
   takeProfitTicks?: number | null;
   result?: "win" | "loss" | "breakeven" | null;
   pnlPoints?: number | null;
+  exitLegs?: { price: number; qty: number; time?: string }[] | null;
   grade?: "A+" | "A" | "B" | "C" | null;
   analysis?: string | null;
   exitNotes?: string | null;
@@ -109,8 +110,19 @@ export const SYMBOLS: Record<string, { label: string; multiplier: number; tick: 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 export function tradePnl(t: Trade): number {
-  if (t.status !== "closed" || t.exitPrice == null) return 0;
+  if (t.status !== "closed") return 0;
   const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
+  if (t.pnlPoints != null) return t.pnlPoints - (t.fee || 0);
+  const legs = t.exitLegs;
+  if (legs && legs.length > 0 && t.entryPrice != null) {
+    const dir = t.direction === "long" ? 1 : -1;
+    let total = 0;
+    for (const leg of legs) {
+      total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+    }
+    return total - (t.fee || 0);
+  }
+  if (t.exitPrice == null) return 0;
   const dir = t.direction === "long" ? 1 : -1;
   return (t.exitPrice - (t.entryPrice || 0)) * dir * t.qty * sym.multiplier - (t.fee || 0);
 }

@@ -54,7 +54,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       entryTime: new Date().toISOString().slice(0, 16), exitTime: "", status: "open",
       stopTicks: "", takeProfitTicks: "", fee: 0, notes: "", movedToBreakeven: false,
       customChecks: {}, attributeValues: [], result: "", pnlPoints: "", grade: "",
-      analysis: "", exitNotes: "", screenshotUrl: "",
+      analysis: "", exitNotes: "", screenshotUrl: "", exitLegs: null,
     }
   );
   const [checked, setChecked] = useState(false);
@@ -76,22 +76,46 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   // Auto-calculate result when closed
   const autoResult = useMemo(() => {
-    if (t.status !== "closed" || t.exitPrice == null || t.entryPrice == null) return null;
+    if (t.status !== "closed") return null;
+    const legs = t.exitLegs;
+    if (legs && legs.length > 0 && t.entryPrice != null) {
+      const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
+      const dir = t.direction === "long" ? 1 : -1;
+      let total = 0;
+      for (const leg of legs) {
+        total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+      }
+      if (total > 0) return "win";
+      if (total < 0) return "loss";
+      return "breakeven";
+    }
+    if (t.exitPrice == null || t.entryPrice == null) return null;
     const pnl = tradePnl(t);
     if (pnl > 0) return "win";
     if (pnl < 0) return "loss";
     return "breakeven";
-  }, [t.status, t.exitPrice, t.entryPrice, t]);
+  }, [t.status, t.exitPrice, t.entryPrice, t, t.exitLegs]);
 
   const displayResult = t.result || autoResult || "";
   const displayPnlPoints = useMemo(() => {
-    if (t.pnlPoints) return t.pnlPoints;
-    if (t.status === "closed" && t.exitPrice != null && t.entryPrice != null) {
+    if (t.pnlPoints != null) return t.pnlPoints;
+    const legs = t.exitLegs;
+    if (legs && legs.length > 0 && t.entryPrice != null) {
+      const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;
-      return ((t.exitPrice - t.entryPrice) * dir).toFixed(1);
+      let total = 0;
+      for (const leg of legs) {
+        total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+      }
+      return total.toFixed(2);
+    }
+    if (t.status === "closed" && t.exitPrice != null && t.entryPrice != null) {
+      const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
+      const dir = t.direction === "long" ? 1 : -1;
+      return ((t.exitPrice - t.entryPrice) * dir * t.qty * sym.multiplier).toFixed(2);
     }
     return "";
-  }, [t.pnlPoints, t.status, t.exitPrice, t.entryPrice, t.direction]);
+  }, [t.pnlPoints, t.exitLegs, t.status, t.exitPrice, t.entryPrice, t.direction, t.qty, t.symbol]);
 
   const setAttrValue = (attributeDefinitionId: string, value: any) => {
     setT((prev: any) => {
@@ -171,6 +195,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       grade: t.grade || null,
       analysis: t.analysis || null,
       exitNotes: t.exitNotes || null,
+      exitLegs: t.exitLegs && t.exitLegs.length > 0 ? JSON.stringify(t.exitLegs) : null,
       screenshotUrl: t.screenshotUrl || null,
     };
     if (trade?.id) {
@@ -238,6 +263,45 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
             </Row>
           )}
 
+          {/* ── Exit Legs (partial fills) ── */}
+          {t.status === "closed" && (
+            <>
+              <SectionTitle>Exit Legs (optional — for partial fills)</SectionTitle>
+              <div className="text-[10px] text-[#5B6478] mb-2">Add multiple exits if you scaled out at different prices. Leave empty for single exit.</div>
+              {(t.exitLegs || []).map((leg: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] text-[#8891A3] w-4">#{idx + 1}</span>
+                  <div className="flex-1 flex gap-2">
+                    <div className="flex-1">
+                      <div className="text-[9px] text-[#5B6478] mb-0.5">Price</div>
+                      <input type="number" value={leg.price} onChange={(e) => {
+                        const legs = [...(t.exitLegs || [])];
+                        legs[idx] = { ...legs[idx], price: Number(e.target.value) };
+                        update("exitLegs", legs);
+                      }} className={`${inputCls} !w-full`} />
+                    </div>
+                    <div className="w-16">
+                      <div className="text-[9px] text-[#5B6478] mb-0.5">Qty</div>
+                      <input type="number" value={leg.qty} onChange={(e) => {
+                        const legs = [...(t.exitLegs || [])];
+                        legs[idx] = { ...legs[idx], qty: Number(e.target.value) };
+                        update("exitLegs", legs);
+                      }} className={`${inputCls} !w-full`} />
+                    </div>
+                    <button onClick={() => {
+                      const legs = (t.exitLegs || []).filter((_: any, i: number) => i !== idx);
+                      update("exitLegs", legs.length > 0 ? legs : null);
+                    }} className="text-[#F1685E] hover:text-[#ff4444] mt-4 text-xs">✕</button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => {
+                const legs = [...(t.exitLegs || []), { price: 0, qty: 0 }];
+                update("exitLegs", legs);
+              }} className={`${pillCls} bg-[#1A2029] text-[#38D9A0] border border-[#1E5844] w-full text-left`}>+ Add Exit Leg</button>
+            </>
+          )}
+
           {/* ── Risk Management ── */}
           <SectionTitle>Risk Management</SectionTitle>
           <Row label="Stop Loss (ticks)">
@@ -272,8 +336,8 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
                   ))}
                 </div>
               </Row>
-              <Row label="PnL (points)">
-                <input type="number" value={displayPnlPoints} onChange={(e) => update("pnlPoints", e.target.value)} className={inputCls} readOnly={!!autoResult} placeholder="auto-calculated" />
+              <Row label="PnL ($)">
+                <input type="number" value={displayPnlPoints} onChange={(e) => update("pnlPoints", e.target.value === "" ? null : Number(e.target.value))} className={inputCls} placeholder="override for partial fills" />
               </Row>
             </>
           )}

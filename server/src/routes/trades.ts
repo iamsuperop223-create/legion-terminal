@@ -48,6 +48,7 @@ const tradeSchema = z.object({
   takeProfitTicks: toInt,
   result: z.string().nullable().optional(),
   pnlPoints: toNum,
+  exitLegs: z.preprocess((v) => (typeof v === "string" ? v : v != null ? JSON.stringify(v) : null), z.string().nullable().optional()),
   grade: z.string().nullable().optional(),
   analysis: z.string().nullable().optional(),
   exitNotes: z.string().nullable().optional(),
@@ -60,7 +61,7 @@ function parseJson(str: string | null | undefined, fallback: any = {}) {
 }
 
 function serializeTrade(t: any) {
-  return { ...t, customChecks: parseJson(t.customChecks, {}), attributeValues: t.attributeValues || [] };
+  return { ...t, customChecks: parseJson(t.customChecks, {}), exitLegs: parseJson(t.exitLegs, null), attributeValues: t.attributeValues || [] };
 }
 
 // List trades for an account
@@ -146,6 +147,7 @@ router.post("/", async (req: AuthRequest, res) => {
         takeProfitTicks: data.takeProfitTicks,
         result: data.result,
         pnlPoints: data.pnlPoints,
+        exitLegs: data.exitLegs,
         grade: data.grade,
         analysis: data.analysis,
         exitNotes: data.exitNotes,
