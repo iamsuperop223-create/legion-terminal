@@ -48,8 +48,17 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return wr * avgW - (1 - wr) * avgL;
   }, [winRate, avgWin, avgLoss, closedTrades]);
 
+  const normalizeDate = (d: string | null | undefined) => {
+    if (!d) return "";
+    try { return new Date(d).toISOString().slice(0, 16); } catch { return ""; }
+  };
+
   const [t, setT] = useState(
-    trade || {
+    trade ? {
+      ...trade,
+      entryTime: normalizeDate(trade.entryTime),
+      exitTime: normalizeDate(trade.exitTime),
+    } : {
       id: uid(), symbol: "NQ", direction: "long", qty: 6, entryPrice: "", exitPrice: "",
       entryTime: new Date().toISOString().slice(0, 16), exitTime: "", status: "open",
       stopTicks: "", takeProfitTicks: "", fee: 0, notes: "", movedToBreakeven: false,
@@ -98,7 +107,6 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   const displayResult = t.result || autoResult || "";
   const displayPnlPoints = useMemo(() => {
-    if (t.pnlPoints != null) return t.pnlPoints;
     const legs = t.exitLegs;
     if (legs && legs.length > 0 && t.entryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
@@ -109,6 +117,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       }
       return total.toFixed(2);
     }
+    if (t.pnlPoints != null) return t.pnlPoints;
     if (t.status === "closed" && t.exitPrice != null && t.entryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;

@@ -112,7 +112,6 @@ export const SYMBOLS: Record<string, { label: string; multiplier: number; tick: 
 export function tradePnl(t: Trade): number {
   if (t.status !== "closed") return 0;
   const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
-  if (t.pnlPoints != null) return t.pnlPoints - (t.fee || 0);
   const legs = t.exitLegs;
   if (legs && legs.length > 0 && t.entryPrice != null) {
     const dir = t.direction === "long" ? 1 : -1;
@@ -122,6 +121,7 @@ export function tradePnl(t: Trade): number {
     }
     return total - (t.fee || 0);
   }
+  if (t.pnlPoints != null) return t.pnlPoints - (t.fee || 0);
   if (t.exitPrice == null) return 0;
   const dir = t.direction === "long" ? 1 : -1;
   return (t.exitPrice - (t.entryPrice || 0)) * dir * t.qty * sym.multiplier - (t.fee || 0);
