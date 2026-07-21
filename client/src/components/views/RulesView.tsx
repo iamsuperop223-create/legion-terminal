@@ -13,7 +13,7 @@ const RULE_TYPES = [
   { value: "maxTradesPerSession", label: "Max Trades Per Session" },
   { value: "breakevenAtR", label: "BE @ R Multiple" },
   { value: "scaleOut", label: "Scale Out Range" },
-  { value: "maxDailyProfit", label: "Max Daily Profit" },
+  { value: "maxDailyProfit", label: "Daily Profit Target" },
   { value: "losingDayBreak", label: "Losing Day Break" },
   { value: "custom", label: "Custom Checklist" },
 ];
@@ -99,7 +99,7 @@ export default function RulesView() {
                       <>scale out <input type="number" value={r.params.minPercent || 30} onChange={(e) => updateField(r.id, "params.minPercent", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" />%–<input type="number" value={r.params.maxPercent || 50} onChange={(e) => updateField(r.id, "params.maxPercent", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" />% of position</>
                     )}
                     {r.type === "maxDailyProfit" && (
-                      <>cap $<input type="number" value={r.params.amount || 500} onChange={(e) => updateField(r.id, "params.amount", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-16" /> daily profit</>
+                      <>stop at $<input type="number" value={r.params.amount || 500} onChange={(e) => updateField(r.id, "params.amount", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-16" /> daily profit target</>
                     )}
                     {r.type === "losingDayBreak" && (
                       <>after <input type="number" value={r.params.consecutiveDays || 3} onChange={(e) => updateField(r.id, "params.consecutiveDays", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" /> losing days, take <input type="number" value={r.params.breakDays || 1} onChange={(e) => updateField(r.id, "params.breakDays", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" /> day break</>

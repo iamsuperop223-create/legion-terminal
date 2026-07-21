@@ -124,11 +124,24 @@ export function evaluateTradeRules(trade: any, rules: any[], allTrades?: any[]):
     } else if (r.type === "maxDailyProfit") {
       if (trade.status !== "closed") return;
       const dk = dayKey(trade.exitTime || trade.entryTime);
-      const dayPnl = closedTrades
-        .filter((t: any) => dayKey(t.exitTime || t.entryTime) === dk)
-        .reduce((a: number, t: any) => a + tradePnl(t), 0);
       const limit = params.amount || 500;
-      results.push({ rule: r, pass: dayPnl <= limit, detail: `Day PnL: ${fmt$(dayPnl)} (cap: $${limit})` });
+      const sortedDay = closedTrades
+        .filter((t: any) => dayKey(t.exitTime || t.entryTime) === dk)
+        .sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+      let cumPnl = 0;
+      let hitTradeIdx = -1;
+      for (let i = 0; i < sortedDay.length; i++) {
+        cumPnl += tradePnl(sortedDay[i]);
+        if (cumPnl >= limit && hitTradeIdx === -1) hitTradeIdx = i;
+      }
+      const thisIdx = sortedDay.findIndex((t: any) => t.id === trade.id);
+      if (thisIdx < hitTradeIdx) {
+        results.push({ rule: r, pass: true, detail: `Day PnL: ${fmt$(cumPnl)} (target: $${limit})` });
+      } else if (thisIdx === hitTradeIdx) {
+        results.push({ rule: r, pass: true, detail: `Hit $${limit} target — stop trading` });
+      } else {
+        results.push({ rule: r, pass: false, detail: `Target $${limit} already hit — trade ${thisIdx - hitTradeIdx + 1} past target` });
+      }
 
     } else if (r.type === "losingDayBreak") {
       if (trade.status !== "closed") return;
@@ -193,7 +206,21 @@ export function computeDailyCompliance(trades: any[], rules: any[]): Record<stri
 
       if (r.type === "maxDailyProfit") {
         const limit = params.amount || 500;
-        ruleResults.push({ rule: r, pass: pnl <= limit, detail: pnl <= limit ? `Under $${limit} cap` : `Exceeded $${limit} cap (${fmt$(pnl)})` });
+        const sorted = [...dayTrades].sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+        let cum = 0;
+        let hitIdx = -1;
+        for (let i = 0; i < sorted.length; i++) {
+          cum += tradePnl(sorted[i]);
+          if (cum >= limit && hitIdx === -1) hitIdx = i;
+        }
+        const overTrades = hitIdx >= 0 ? sorted.length - hitIdx - 1 : 0;
+        if (hitIdx >= 0 && overTrades > 0) {
+          ruleResults.push({ rule: r, pass: false, detail: `Hit $${limit} target, then took ${overTrades} more trade${overTrades > 1 ? "s" : ""}` });
+        } else if (hitIdx >= 0) {
+          ruleResults.push({ rule: r, pass: true, detail: `Hit $${limit} target — stopped` });
+        } else {
+          ruleResults.push({ rule: r, pass: true, detail: `${fmt$(pnl)} (target: $${limit})` });
+        }
       }
 
       if (r.type === "losingDayBreak" && dayTrades.length > 0) {
