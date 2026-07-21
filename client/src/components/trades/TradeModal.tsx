@@ -166,7 +166,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       customChecks: t.customChecks || {},
       stopTicks: t.stopTicks === "" || t.stopTicks == null ? null : Number(t.stopTicks),
       takeProfitTicks: t.takeProfitTicks === "" || t.takeProfitTicks == null ? null : Number(t.takeProfitTicks),
-      result: autoResult || t.result || null,
+      result: t.result || autoResult || null,
       pnlPoints: displayPnlPoints ? Number(displayPnlPoints) : null,
       grade: t.grade || null,
       analysis: t.analysis || null,
