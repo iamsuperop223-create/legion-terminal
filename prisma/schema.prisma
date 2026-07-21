@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  avatarUrl     String?
+  provider      String    @default("local") // local | google
+  providerId    String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  passwordResets  PasswordReset[]
+  tradingAccounts TradingAccount[]
+  attributes      AttributeDefinition[]
+  journals        JournalEntry[]
+  settings        UserSetting?
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String  @default("credentials") // credentials | google
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+// ─── Trading Accounts ────────────────────────────────────────────────
+
+model TradingAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   @default("sim") // eval | funded | sim
+  balance     Float    @default(10000)
+  currency    String   @default("USD")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades  Trade[]
+  rules   Rule[]
+
+  @@index([userId])
+}
+
+// ─── Core Trading ────────────────────────────────────────────────────
+
+model Trade {
+  id               String    @id @default(cuid())
+  accountId        String
+  symbol           String    @default("NQ")
+  direction        String    @default("long") // long | short
+  qty              Int       @default(1)
+  entryPrice       Float?
+  exitPrice        Float?
+  entryTime        DateTime
+  exitTime         DateTime?
+  status           String    @default("open") // open | closed
+  fee              Float     @default(0)
+  notes            String?
+  movedToBreakeven Boolean   @default(false)
+  customChecks     String    @default("{}")
+  takeProfitTicks  Int?
+  stopTicks        Int?
+  result           String?   // win | loss | breakeven
+  pnlPoints        Float?
+  grade            String?   // A+, A, B, C
+  analysis         String?
+  exitNotes        String?
+  screenshotUrl    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  account        TradingAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  attributeValues AttributeValue[]
+  journalEntries JournalEntry[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([entryTime])
+}
+
+// ─── Extensible Attribute System ─────────────────────────────────────
+
+model AttributeDefinition {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  category   String   @default("order-flow")
+  valueType  String   @default("text") // text | number | boolean | select | scale
+  options    Json?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  values AttributeValue[]
+
+  @@index([userId])
+}
+
+model AttributeValue {
+  id                      String @id @default(cuid())
+  tradeId                 String
+  attributeDefinitionId   String
+  value                   Json
+
+  trade    Trade               @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  attribute AttributeDefinition @relation(fields: [attributeDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([tradeId, attributeDefinitionId])
+  @@index([tradeId])
+  @@index([attributeDefinitionId])
+}
+
+// ─── Rules Engine ────────────────────────────────────────────────────
+
+model Rule {
+  id       String  @id @default(cuid())
+  accountId String
+  name     String
+  type     String  @default("custom") // maxContracts | stopRange | dailyLossLimit | breakeven | custom
+  params   Json    @default("{}")
+  active   Boolean @default(true)
+
+  account TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+// ─── Journal ─────────────────────────────────────────────────────────
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  tradeId   String?
+  date      DateTime @default(now())
+  title     String
+  content   String?
+  mood      String?
+  tags      Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trade Trade? @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ─── Settings ────────────────────────────────────────────────────────
+
+model UserSetting {
+  id       String @id @default(cuid())
+  userId   String @unique
+  theme    String @default("dark")
+  layout   Json   @default("{}")
+  timezone String @default("America/New_York")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,10 @@
+{
+  "build": {
+    "buildTarget": "runner"
+  },
+  "deploy": {
+    "startCommand": "nginx -g 'daemon off;'",
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300
+  }
+}
