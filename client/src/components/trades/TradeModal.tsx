@@ -82,7 +82,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return "breakeven";
   }, [t.status, t.exitPrice, t.entryPrice, t]);
 
-  const displayResult = autoResult || t.result || "";
+  const displayResult = t.result || autoResult || "";
   const displayPnlPoints = useMemo(() => {
     if (t.pnlPoints) return t.pnlPoints;
     if (t.status === "closed" && t.exitPrice != null && t.entryPrice != null) {
