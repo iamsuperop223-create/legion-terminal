@@ -7,9 +7,10 @@ interface Props {
   onEdit: (trade: any) => void;
   onDelete?: (id: string) => void;
   rules?: any[];
+  allTrades?: any[];
 }
 
-export function TradeTable({ trades, onEdit, onDelete, rules = [] }: Props) {
+export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: Props) {
   const cols = ["Date", "Symbol", "Dir", "Qty", "Entry", "Exit", "PnL", "Compliance", ""];
 
   return (
@@ -27,7 +28,7 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [] }: Props) {
         <tbody>
           {trades.map((t) => {
             const pnl = tradePnl(t);
-            const results = evaluateTradeRules(t, rules);
+            const results = evaluateTradeRules(t, rules, allTrades);
             const fails = results.filter((r) => !r.pass).length;
             return (
               <tr key={t.id} className="border-b border-border">

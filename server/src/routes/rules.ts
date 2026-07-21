@@ -7,7 +7,7 @@ const router = Router();
 const ruleSchema = z.object({
   accountId: z.string(),
   name: z.string().min(1),
-  type: z.enum(["maxContracts", "stopRange", "dailyLossLimit", "breakeven", "custom"]),
+  type: z.enum(["maxContracts", "stopRange", "dailyLossLimit", "breakeven", "custom", "maxTradesPerDay", "maxTradesPerSession", "breakevenAtR", "scaleOut", "maxDailyProfit", "losingDayBreak"]),
   params: z.record(z.any()).default({}),
   active: z.boolean().default(true),
 });

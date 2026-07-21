@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function TradeLog({ onEdit }: Props) {
-  const { trades, deleteTrade } = useAppStore();
+  const { trades, rules, deleteTrade } = useAppStore();
 
   return (
     <div className="p-5">
@@ -20,6 +20,8 @@ export default function TradeLog({ onEdit }: Props) {
             trades={[...trades].sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime())}
             onEdit={onEdit}
             onDelete={deleteTrade}
+            rules={rules}
+            allTrades={trades}
           />
         )}
       </Card>

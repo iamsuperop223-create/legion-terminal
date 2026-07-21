@@ -53,6 +53,8 @@ export default function Dashboard({ onEdit }: Props) {
           <TradeTable
             trades={[...trades].sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()).slice(0, 8)}
             onEdit={onEdit}
+            rules={rules}
+            allTrades={trades}
           />
         )}
       </Card>
