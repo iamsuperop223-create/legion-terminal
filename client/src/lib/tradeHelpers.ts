@@ -247,3 +247,89 @@ export function computeDailyCompliance(trades: any[], rules: any[]): Record<stri
 
   return result;
 }
+
+// ─── Auto-Calculated Attributes ────────────────────────────────────
+
+export interface AutoAttribute {
+  id: string;
+  label: string;
+  value: string;
+  category: "auto";
+}
+
+export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribute[] {
+  const attrs: AutoAttribute[] = [];
+  if (!trade) return attrs;
+
+  const closedTrades = allTrades.filter((t: any) => t.status === "closed")
+    .sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+
+  // R-Multiple
+  if (trade.status === "closed" && trade.entryPrice != null) {
+    const sym = SYMBOLS[trade.symbol] || { multiplier: 1 };
+    const stopTicks = Number(trade.stopTicks);
+    if (stopTicks > 0) {
+      const riskDollars = stopTicks * sym.multiplier * 0.25;
+      const pnl = tradePnl(trade);
+      const rMult = pnl / riskDollars;
+      attrs.push({ id: "rMultiple", label: "R-Multiple", value: `${rMult >= 0 ? "+" : ""}${rMult.toFixed(2)}R`, category: "auto" });
+    }
+  }
+
+  // Session
+  const entryTime = trade.entryTime ? new Date(trade.entryTime) : null;
+  if (entryTime) {
+    const h = entryTime.getHours();
+    const m = entryTime.getMinutes();
+    const timeVal = h * 60 + m;
+    let session = "OVN";
+    if (timeVal >= 510 && timeVal < 540) session = "OR (8:30-9:00)";
+    else if (timeVal >= 540 && timeVal < 900) session = "RTH";
+    else if (timeVal >= 900) session = "RTH Late";
+    attrs.push({ id: "session", label: "Session", value: session, category: "auto" });
+  }
+
+  // Time of Day
+  if (entryTime) {
+    const h = entryTime.getHours();
+    let tod = "Pre-Market";
+    if (h >= 8 && h < 10) tod = "Morning";
+    else if (h >= 10 && h < 12) tod = "Mid-Morning";
+    else if (h >= 12 && h < 14) tod = "Midday";
+    else if (h >= 14 && h < 16) tod = "Afternoon";
+    else if (h >= 16) tod = "Late Session";
+    attrs.push({ id: "timeOfDay", label: "Time of Day", value: tod, category: "auto" });
+  }
+
+  // Day of Week
+  if (entryTime) {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    attrs.push({ id: "dayOfWeek", label: "Day of Week", value: days[entryTime.getDay()], category: "auto" });
+  }
+
+  // Consecutive Wins/Losses (streak at time of this trade)
+  if (trade.status === "closed") {
+    const tradeTime = new Date(trade.exitTime || trade.entryTime).getTime();
+    const prior = closedTrades.filter((t: any) => new Date(t.exitTime || t.entryTime).getTime() < tradeTime);
+    let streak = 0;
+    let streakType = "";
+    for (let i = prior.length - 1; i >= 0; i--) {
+      const pnl = tradePnl(prior[i]);
+      if (i === prior.length - 1) {
+        streakType = pnl >= 0 ? "win" : "loss";
+      }
+      if ((streakType === "win" && pnl >= 0) || (streakType === "loss" && pnl < 0)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    if (streak > 0) {
+      attrs.push({ id: "streak", label: "Streak", value: `${streak} ${streakType}${streak > 1 ? "s" : ""}`, category: "auto" });
+    }
+  }
+
+  return attrs;
+}
+
+export const AUTO_ATTRIBUTE_IDS = ["rMultiple", "session", "timeOfDay", "dayOfWeek", "streak"];

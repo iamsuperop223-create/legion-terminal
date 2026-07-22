@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef } from "react";
 import { useAppStore } from "@/stores/appStore";
-import { X, ShieldCheck, Check, AlertTriangle, Upload } from "lucide-react";
+import { X, ShieldCheck, Check, AlertTriangle, Upload, Lock } from "lucide-react";
 import { SYMBOLS, uid } from "@/types";
-import { evaluateTradeRules, tradePnl, fmt$ } from "@/lib/tradeHelpers";
+import { evaluateTradeRules, tradePnl, fmt$, computeAutoAttributes } from "@/lib/tradeHelpers";
 import { api } from "@/lib/api";
 
 interface Props {
@@ -74,6 +74,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
   const update = (k: string, v: any) => setT((prev: any) => ({ ...prev, [k]: v }));
   const customRules = rules.filter((r) => r.type === "custom" && r.active);
   const evalResults = useMemo(() => evaluateTradeRules(t, rules), [t, rules]);
+  const autoAttrs = useMemo(() => computeAutoAttributes(t, trades), [t, trades]);
 
   // Auto-calculate R:R
   const rr = useMemo(() => {
@@ -421,6 +422,23 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
               placeholder="Trade rationale, footprint read, absorption context..."
             />
           </div>
+
+          {/* ── Auto-Tracked Attributes ── */}
+          {autoAttrs.length > 0 && (
+            <div>
+              <div className="text-[11px] text-[#D4A24E] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Lock size={10} /> Auto-Tracked
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {autoAttrs.map((a) => (
+                  <div key={a.id} className="bg-[#1A2029] border border-[#232B38] rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-[#5B6478] uppercase tracking-wider">{a.label}</div>
+                    <div className="text-sm font-mono font-semibold text-[#E7EAEF] mt-0.5">{a.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Custom Rules & Attributes ── */}
           {customRules.map((r) => (
