@@ -264,6 +264,16 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
   const closedTrades = allTrades.filter((t: any) => t.status === "closed")
     .sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
 
+  // Parse hours/minutes directly from the entry time string (avoids timezone conversion)
+  const parseTime = (iso: string | null | undefined): { h: number; m: number } | null => {
+    if (!iso) return null;
+    const match = iso.match(/T(\d{2}):(\d{2})/);
+    if (!match) return null;
+    return { h: parseInt(match[1]), m: parseInt(match[2]) };
+  };
+
+  const entryParsed = parseTime(trade.entryTime);
+
   // R-Multiple
   if (trade.status === "closed" && trade.entryPrice != null) {
     const sym = SYMBOLS[trade.symbol] || { multiplier: 1 };
@@ -277,10 +287,8 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
   }
 
   // Session
-  const entryTime = trade.entryTime ? new Date(trade.entryTime) : null;
-  if (entryTime) {
-    const h = entryTime.getHours();
-    const m = entryTime.getMinutes();
+  if (entryParsed) {
+    const { h, m } = entryParsed;
     const timeVal = h * 60 + m;
     let session = "OVN";
     if (timeVal >= 510 && timeVal < 540) session = "OR (8:30-9:00)";
@@ -290,8 +298,8 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
   }
 
   // Time of Day
-  if (entryTime) {
-    const h = entryTime.getHours();
+  if (entryParsed) {
+    const { h } = entryParsed;
     let tod = "Pre-Market";
     if (h >= 8 && h < 10) tod = "Morning";
     else if (h >= 10 && h < 12) tod = "Mid-Morning";
@@ -302,9 +310,12 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
   }
 
   // Day of Week
-  if (entryTime) {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    attrs.push({ id: "dayOfWeek", label: "Day of Week", value: days[entryTime.getDay()], category: "auto" });
+  if (entryParsed) {
+    const entryDate = trade.entryTime ? new Date(trade.entryTime + "Z") : null;
+    if (entryDate) {
+      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      attrs.push({ id: "dayOfWeek", label: "Day of Week", value: days[entryDate.getUTCDay()], category: "auto" });
+    }
   }
 
   // Consecutive Wins/Losses (streak at time of this trade)
