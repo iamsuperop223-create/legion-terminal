@@ -286,18 +286,17 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
     }
   }
 
-  // Session
+  // Session (CST: ETH 5:00PM-8:30AM, RTH 8:30AM-3:15PM)
   if (entryParsed) {
     const { h, m } = entryParsed;
     const timeVal = h * 60 + m;
-    let session = "OVN";
-    if (timeVal >= 510 && timeVal < 540) session = "OR (8:30-9:00)";
-    else if (timeVal >= 540 && timeVal < 900) session = "RTH";
-    else if (timeVal >= 900) session = "RTH Late";
+    let session = "ETH";
+    if (timeVal >= 510 && timeVal <= 915) session = "RTH";
+    else if (timeVal > 915) session = "After Hours";
     attrs.push({ id: "session", label: "Session", value: session, category: "auto" });
   }
 
-  // Time of Day
+  // Time of Day (CST)
   if (entryParsed) {
     const { h } = entryParsed;
     let tod = "Pre-Market";
