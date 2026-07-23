@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { Card } from "@/components/ui/Card";
-import { Trash2, AlertTriangle, CheckCircle } from "lucide-react";
-import { tradePnl, fmt$, computeDailyCompliance } from "@/lib/tradeHelpers";
+import { Trash2, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { tradePnl, fmt$, computeDailyCompliance, evaluateTradeRules } from "@/lib/tradeHelpers";
 
 const RULE_TYPES = [
   { value: "maxContracts", label: "Max Contracts" },
@@ -55,6 +55,9 @@ export default function RulesView() {
   const days = Object.entries(dailyCompliance)
     .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
     .slice(0, 14);
+
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+  const toggleDay = (dk: string) => setExpandedDays((p) => ({ ...p, [dk]: !p[dk] }));
 
   const activeRuleCount = rules.filter((r) => r.active).length;
 
@@ -136,8 +139,11 @@ export default function RulesView() {
           <div className="text-xs text-textFaint uppercase tracking-wider mb-3">Daily compliance</div>
           <div className="flex flex-col gap-2">
             {days.map(([dk, data]) => {
-              const allPass = data.ruleResults.length === 0 || data.ruleResults.every((r) => r.pass);
-              const hasFailures = data.ruleResults.some((r) => !r.pass);
+              const dailyPass = data.ruleResults.length === 0 || data.ruleResults.every((r) => r.pass);
+              const hasDailyFailures = data.ruleResults.some((r) => !r.pass);
+              const hasTradeIssues = data.trades?.some((t: any) => evaluateTradeRules(t, rules, trades).some((r) => !r.pass));
+              const allPass = dailyPass && !hasTradeIssues;
+              const hasFailures = hasDailyFailures || hasTradeIssues;
               return (
                 <div key={dk} className="bg-surface2 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
@@ -151,21 +157,20 @@ export default function RulesView() {
                       <span className={`font-mono font-semibold text-sm ${data.pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
                         {fmt$(data.pnl)}
                       </span>
-                      {data.ruleResults.length > 0 && (
-                        hasFailures ? (
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-accent-red bg-accent-redDim px-2 py-0.5 rounded-full">
-                            <AlertTriangle size={10} /> VIOLATION
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-accent-green bg-accent-greenDim px-2 py-0.5 rounded-full">
-                            <CheckCircle size={10} /> PASS
-                          </span>
-                        )
+                      {hasFailures ? (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-accent-red bg-accent-redDim px-2 py-0.5 rounded-full">
+                          <AlertTriangle size={10} /> VIOLATION
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-accent-green bg-accent-greenDim px-2 py-0.5 rounded-full">
+                          <CheckCircle size={10} /> PASS
+                        </span>
                       )}
                     </div>
                   </div>
+                  {/* Daily-level rules */}
                   {data.ruleResults.length > 0 && (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 mb-2">
                       {data.ruleResults.map((rr, i) => (
                         <div key={i} className="flex items-center gap-2 text-[11px]">
                           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${rr.pass ? "bg-accent-green" : "bg-accent-red"}`} />
@@ -173,6 +178,48 @@ export default function RulesView() {
                           <span className={rr.pass ? "text-accent-green" : "text-accent-red"}>{rr.detail}</span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Per-trade details */}
+                  {data.trades && data.trades.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => toggleDay(dk)}
+                        className="flex items-center gap-1 text-[10px] text-textFaint uppercase tracking-wider hover:text-text transition mb-1"
+                      >
+                        {expandedDays[dk] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                        Per-trade details
+                      </button>
+                      {expandedDays[dk] && (
+                        <div className="flex flex-col gap-1.5 mt-1 border-t border-border pt-1.5">
+                          {data.trades.map((trade: any) => {
+                            const tradeResults = evaluateTradeRules(trade, rules, trades);
+                            const tradeFails = tradeResults.filter((r) => !r.pass);
+                            return (
+                              <div key={trade.id} className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <span className={`font-mono font-semibold ${tradePnl(trade) >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                                    {fmt$(tradePnl(trade))}
+                                  </span>
+                                  <span className="text-textDim">{trade.symbol} {trade.direction} x{trade.qty}</span>
+                                  {tradeFails.length > 0 ? (
+                                    <span className="text-accent-red font-bold">{tradeFails.length} issue{tradeFails.length > 1 ? "s" : ""}</span>
+                                  ) : (
+                                    <span className="text-accent-green text-[10px]">✓ all rules passed</span>
+                                  )}
+                                </div>
+                                {tradeFails.map((r, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-[10px] ml-16">
+                                    <span className="w-1 h-1 rounded-full bg-accent-red flex-shrink-0" />
+                                    <span className="text-textDim">{r.rule.name}:</span>
+                                    <span className="text-accent-red">{r.detail}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

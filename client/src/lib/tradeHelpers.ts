@@ -176,7 +176,7 @@ export function evaluateTradeRules(trade: any, rules: any[], allTrades?: any[]):
   return results;
 }
 
-export function computeDailyCompliance(trades: any[], rules: any[]): Record<string, { pnl: number; tradeCount: number; ruleResults: { rule: any; pass: boolean; detail: string }[] }> {
+export function computeDailyCompliance(trades: any[], rules: any[]): Record<string, { pnl: number; tradeCount: number; ruleResults: { rule: any; pass: boolean; detail: string }[]; trades: any[] }> {
   const closed = trades.filter((t: any) => t.status === "closed");
   const byDay: Record<string, any[]> = {};
   closed.forEach((t: any) => {
@@ -185,7 +185,7 @@ export function computeDailyCompliance(trades: any[], rules: any[]): Record<stri
     byDay[dk].push(t);
   });
 
-  const result: Record<string, { pnl: number; tradeCount: number; ruleResults: { rule: any; pass: boolean; detail: string }[] }> = {};
+  const result: Record<string, { pnl: number; tradeCount: number; ruleResults: { rule: any; pass: boolean; detail: string }[]; trades: any[] }> = {};
 
   Object.entries(byDay).forEach(([dk, dayTrades]) => {
     const pnl = dayTrades.reduce((a: number, t: any) => a + tradePnl(t), 0);
@@ -242,7 +242,7 @@ export function computeDailyCompliance(trades: any[], rules: any[]): Record<stri
       }
     });
 
-    result[dk] = { pnl, tradeCount: dayTrades.length, ruleResults };
+    result[dk] = { pnl, tradeCount: dayTrades.length, ruleResults, trades: dayTrades };
   });
 
   return result;
