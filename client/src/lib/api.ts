@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "";
+export const API_URL = import.meta.env.VITE_API_URL || "https://legion-terminal-production.up.railway.app";
 
 class ApiClient {
   private token: string | null = null;

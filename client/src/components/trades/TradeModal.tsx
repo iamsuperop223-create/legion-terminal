@@ -3,7 +3,7 @@ import { useAppStore } from "@/stores/appStore";
 import { X, ShieldCheck, Check, AlertTriangle, Upload, Lock } from "lucide-react";
 import { SYMBOLS, uid } from "@/types";
 import { evaluateTradeRules, tradePnl, fmt$, computeAutoAttributes } from "@/lib/tradeHelpers";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 
 interface Props {
   trade: any;
@@ -147,10 +147,9 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   const getScreenshots = (): string[] => {
     if (!t.screenshotUrl) return [];
-    const apiUrl = import.meta.env.VITE_API_URL || "";
     let urls: string[];
     try { urls = JSON.parse(t.screenshotUrl); } catch { urls = [t.screenshotUrl]; }
-    return urls.map((u) => u.startsWith("http") ? u : `${apiUrl}${u}`);
+    return urls.map((u) => u.startsWith("http") ? u : `${API_URL}${u}`);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,8 +162,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         formData.append("screenshots", files[i]);
       }
       const token = api.getToken();
-      const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/trades/upload`, {
+      const res = await fetch(`${API_URL}/api/trades/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
