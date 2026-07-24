@@ -209,6 +209,13 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     update("screenshotUrl", updated.length ? JSON.stringify(updated) : null);
   };
 
+  const toISOStringLocal = (v: string | null | undefined): string | null => {
+    if (!v) return null;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  };
+
   const submit = async () => {
     const cleaned: any = {
       accountId: activeAccountId,
@@ -217,8 +224,8 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       qty: Number(t.qty) || 0,
       entryPrice: t.entryPrice === "" ? null : Number(t.entryPrice),
       exitPrice: t.exitPrice === "" || t.exitPrice == null ? null : Number(t.exitPrice),
-      entryTime: t.entryTime,
-      exitTime: t.exitTime || null,
+      entryTime: toISOStringLocal(t.entryTime),
+      exitTime: toISOStringLocal(t.exitTime),
       status: t.status,
       fee: Number(t.fee) || 0,
       notes: t.notes || "",
