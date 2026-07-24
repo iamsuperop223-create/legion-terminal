@@ -211,9 +211,13 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   const toISOStringLocal = (v: string | null | undefined): string | null => {
     if (!v) return null;
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString();
+    const parts = v.split("T");
+    if (parts.length !== 2) return null;
+    const [y, mo, d] = parts[0].split("-").map(Number);
+    const [h, mi] = parts[1].split(":").map(Number);
+    const dt = new Date(y, mo - 1, d, h, mi);
+    if (isNaN(dt.getTime())) return null;
+    return dt.toISOString();
   };
 
   const submit = async () => {

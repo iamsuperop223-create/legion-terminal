@@ -12,10 +12,11 @@ interface Props {
 }
 
 export default function Dashboard({ onEdit }: Props) {
-  const { trades, rules, accounts, activeAccountId, bulkSetFee } = useAppStore();
+  const { trades, rules, accounts, activeAccountId, bulkSetFee, fixTradeTimes } = useAppStore();
   const [feeModal, setFeeModal] = useState(false);
   const [feeInput, setFeeInput] = useState("");
   const [feeLoading, setFeeLoading] = useState(false);
+  const [fixTimesLoading, setFixTimesLoading] = useState(false);
   const activeAccount = accounts.find((a) => a.id === activeAccountId);
   const closed = trades.filter((t) => t.status === "closed");
   const open = trades.filter((t) => t.status === "open");
@@ -69,9 +70,25 @@ export default function Dashboard({ onEdit }: Props) {
               <DollarSign size={13} />
               <span>Fee per trade: {closed.some((t) => t.fee > 0) ? fmt$(closed[0].fee) : "not set"}</span>
             </div>
-            <button onClick={() => setFeeModal(true)} className="text-[11px] px-3 py-1.5 rounded-lg bg-surface2 text-textDim hover:text-text transition font-semibold">
-              Set Fee (all trades)
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setFeeModal(true)} className="text-[11px] px-3 py-1.5 rounded-lg bg-surface2 text-textDim hover:text-text transition font-semibold">
+                Set Fee
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm("This shifts ALL trade times by your timezone offset to fix incorrect dates. Only run this ONCE. Continue?")) return;
+                  setFixTimesLoading(true);
+                  const offsetMs = new Date().getTimezoneOffset() * 60 * 1000;
+                  const count = await fixTradeTimes(offsetMs);
+                  setFixTimesLoading(false);
+                  alert(`Fixed ${count} trades.`);
+                }}
+                disabled={fixTimesLoading}
+                className="text-[11px] px-3 py-1.5 rounded-lg bg-[#5C2A28] text-[#F1685E] hover:brightness-125 transition font-semibold disabled:opacity-50"
+              >
+                {fixTimesLoading ? "Fixing..." : "Fix Trade Times"}
+              </button>
+            </div>
           </div>
         </Card>
       )}

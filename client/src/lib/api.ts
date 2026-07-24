@@ -116,6 +116,13 @@ class ApiClient {
     });
   }
 
+  async fixTradeTimes(offsetMs: number) {
+    return this.request<{ updated: number }>("/api/trades/fix-times", {
+      method: "POST",
+      body: JSON.stringify({ offsetMs }),
+    });
+  }
+
   async setTradeAttribute(tradeId: string, attributeDefinitionId: string, value: any) {
     return this.request(`/api/trades/${tradeId}/attributes`, {
       method: "POST",

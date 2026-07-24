@@ -203,6 +203,42 @@ router.put("/:id", async (req: AuthRequest, res) => {
   }
 });
 
+// Bulk fix trade times — shifts all entryTime/exitTime by offsetMs milliseconds
+// Used to correct timezone shifts from old code that stored local times as UTC
+router.post("/fix-times", async (req: AuthRequest, res) => {
+  try {
+    const { offsetMs } = z.object({
+      offsetMs: z.number(),
+    }).parse(req.body);
+
+    const prisma = req.prisma;
+
+    const trades = await prisma.trade.findMany({
+      where: { account: { userId: req.userId } },
+      select: { id: true, entryTime: true, exitTime: true },
+    });
+
+    let updated = 0;
+    for (const trade of trades) {
+      const newEntry = new Date(trade.entryTime.getTime() + offsetMs);
+      const newExit = trade.exitTime ? new Date(trade.exitTime.getTime() + offsetMs) : null;
+      await prisma.trade.update({
+        where: { id: trade.id },
+        data: { entryTime: newEntry, exitTime: newExit },
+      });
+      updated++;
+    }
+
+    res.json({ updated });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    res.status(500).json({ error: "Failed to fix trade times" });
+  }
+});
+
 // Bulk set fee on all closed trades for an account
 router.post("/bulk-fee", async (req: AuthRequest, res) => {
   try {

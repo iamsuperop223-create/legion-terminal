@@ -20,6 +20,7 @@ interface AppState {
   updateTrade: (id: string, data: Record<string, any>) => Promise<void>;
   deleteTrade: (id: string) => Promise<void>;
   bulkSetFee: (fee: number) => Promise<number>;
+  fixTradeTimes: (offsetMs: number) => Promise<number>;
 
   // Rules
   rules: Rule[];
@@ -112,6 +113,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { activeAccountId } = get();
     if (!activeAccountId) return 0;
     const { updated } = await api.bulkSetFee(activeAccountId, fee);
+    await get().loadTrades();
+    return updated;
+  },
+
+  fixTradeTimes: async (offsetMs) => {
+    const { updated } = await api.fixTradeTimes(offsetMs);
     await get().loadTrades();
     return updated;
   },
