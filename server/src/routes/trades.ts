@@ -3,18 +3,10 @@ import { z } from "zod";
 import { AuthRequest } from "../middleware/auth.js";
 import multer from "multer";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, "../../uploads");
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
@@ -85,14 +77,17 @@ router.get("/", async (req: AuthRequest, res) => {
   }
 });
 
-// Upload screenshot(s) (MUST be before /:id routes)
+// Upload screenshot(s) — stores as base64 data URLs in DB (MUST be before /:id routes)
 router.post("/upload", upload.array("screenshots", 20), (req: AuthRequest, res) => {
   const files = req.files as Express.Multer.File[];
   if (!files || files.length === 0) {
     res.status(400).json({ error: "No files uploaded" });
     return;
   }
-  const urls = files.map((f) => `/uploads/${f.filename}`);
+  const urls = files.map((f) => {
+    const b64 = f.buffer.toString("base64");
+    return `data:${f.mimetype};base64,${b64}`;
+  });
   res.json({ urls });
 });
 

@@ -145,12 +145,17 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return acc;
   }, {});
 
-  const getScreenshots = (): string[] => {
+  const getRawScreenshots = (): string[] => {
     if (!t.screenshotUrl) return [];
-    let urls: string[];
-    try { urls = JSON.parse(t.screenshotUrl); } catch { urls = [t.screenshotUrl]; }
-    return urls.map((u) => u.startsWith("http") ? u : `${API_URL}${u}`);
+    try { const urls = JSON.parse(t.screenshotUrl); return Array.isArray(urls) ? urls : [t.screenshotUrl]; } catch { return [t.screenshotUrl]; }
   };
+
+  const resolveScreenshotUrl = (u: string) => {
+    if (u.startsWith("http") || u.startsWith("data:")) return u;
+    return `${API_URL}${u}`;
+  };
+
+  const getScreenshots = (): string[] => getRawScreenshots().map(resolveScreenshotUrl);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -169,7 +174,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       });
       const data = await res.json();
       if (data.urls) {
-        const existing = getScreenshots();
+        const existing = getRawScreenshots();
         update("screenshotUrl", JSON.stringify([...existing, ...data.urls]));
       }
     } catch (err) {
@@ -180,7 +185,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
   };
 
   const removeScreenshot = (idx: number) => {
-    const updated = getScreenshots().filter((_, i) => i !== idx);
+    const updated = getRawScreenshots().filter((_, i) => i !== idx);
     update("screenshotUrl", updated.length ? JSON.stringify(updated) : null);
   };
 
