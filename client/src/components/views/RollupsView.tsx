@@ -7,7 +7,11 @@ import { ChevronDown, ChevronUp, Trophy, AlertTriangle } from "lucide-react";
 type Period = "daily" | "weekly" | "monthly";
 
 function dayKey(d: string): string {
-  return new Date(d).toISOString().slice(0, 10);
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function weekKey(d: string): string {
@@ -22,7 +26,8 @@ function monthKey(d: string): string {
 }
 
 function fmtDateShort(dk: string): string {
-  return new Date(dk).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const [y, m, d] = dk.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function fmtWeekLabel(wk: string): string {
@@ -48,10 +53,7 @@ interface RollupData {
   profitFactor: number;
   bestTrade: any | null;
   worstTrade: any | null;
-  complianceFails: number;
-  complianceTotal: number;
   ruleViolations: string[];
-  moods: Record<string, number>;
   streak: { type: string; count: number };
 }
 
@@ -90,10 +92,6 @@ function computeRollups(trades: any[], rules: any[], period: Period): RollupData
         else break;
       }
 
-      const moods: Record<string, number> = {};
-
-      let complianceFails = 0;
-      let complianceTotal = 0;
       const violations: string[] = [];
 
       ts.forEach((t) => {
@@ -102,8 +100,6 @@ function computeRollups(trades: any[], rules: any[], period: Period): RollupData
             if (!followed) {
               const rule = rules.find((r) => r.id === ruleId);
               if (rule) {
-                complianceFails++;
-                complianceTotal++;
                 if (!violations.includes(rule.name)) violations.push(rule.name);
               }
             }
@@ -129,10 +125,7 @@ function computeRollups(trades: any[], rules: any[], period: Period): RollupData
         profitFactor: grossLoss ? grossWin / grossLoss : grossWin > 0 ? 999 : 0,
         bestTrade: wins.length ? wins.reduce((best, t) => tradePnl(t) > tradePnl(best) ? t : best) : null,
         worstTrade: losses.length ? losses.reduce((worst, t) => tradePnl(t) < tradePnl(worst) ? t : worst) : null,
-        complianceFails,
-        complianceTotal: complianceTotal || ts.length,
         ruleViolations: violations,
-        moods,
         streak: { type: streakType, count: streak },
       };
     });

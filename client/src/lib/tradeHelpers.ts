@@ -32,7 +32,11 @@ export function fmtDate(d: string): string {
 }
 
 function dayKey(d: string): string {
-  return new Date(d).toISOString().slice(0, 10);
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function sessionKey(d: string): string {
@@ -310,10 +314,10 @@ export function computeAutoAttributes(trade: any, allTrades: any[]): AutoAttribu
 
   // Day of Week
   if (entryParsed) {
-    const entryDate = trade.entryTime ? new Date(trade.entryTime + "Z") : null;
+    const entryDate = trade.entryTime ? new Date(trade.entryTime) : null;
     if (entryDate) {
       const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      attrs.push({ id: "dayOfWeek", label: "Day of Week", value: days[entryDate.getUTCDay()], category: "auto" });
+      attrs.push({ id: "dayOfWeek", label: "Day of Week", value: days[entryDate.getDay()], category: "auto" });
     }
   }
 

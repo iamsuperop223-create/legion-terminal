@@ -149,7 +149,7 @@ export default function RulesView() {
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold">
-                        {new Date(dk).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                        {(() => { const [y, m, d] = dk.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); })()}
                       </span>
                       <span className="text-[11px] text-textFaint">{data.tradeCount} trade{data.tradeCount !== 1 ? "s" : ""}</span>
                     </div>

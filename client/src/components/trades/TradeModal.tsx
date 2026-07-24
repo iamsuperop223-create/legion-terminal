@@ -50,7 +50,11 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
 
   const normalizeDate = (d: string | null | undefined) => {
     if (!d) return "";
-    try { return new Date(d).toISOString().slice(0, 16); } catch { return ""; }
+    try {
+      const dt = new Date(d);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    } catch { return ""; }
   };
 
   const [t, setT] = useState(
@@ -60,7 +64,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       exitTime: normalizeDate(trade.exitTime),
     } : {
       id: uid(), symbol: "NQ", direction: "long", qty: 6, entryPrice: "", exitPrice: "",
-      entryTime: new Date().toISOString().slice(0, 16), exitTime: "", status: "open",
+      entryTime: (() => { const n = new Date(); const p = (x: number) => String(x).padStart(2, "0"); return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`; })(), exitTime: "", status: "open",
       stopTicks: "", takeProfitTicks: "", fee: 0, notes: "", movedToBreakeven: false,
       customChecks: {}, attributeValues: [], result: "", pnlPoints: "", grade: "",
       analysis: "", exitNotes: "", screenshotUrl: "", exitLegs: null,

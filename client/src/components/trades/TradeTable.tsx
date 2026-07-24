@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Pill } from "@/components/ui/Card";
 import { tradePnl, fmt$, fmtDate, evaluateTradeRules } from "@/lib/tradeHelpers";
 import { Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
@@ -35,7 +35,7 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
             const fails = results.filter((r) => !r.pass);
             const isOpen = !!expanded[t.id];
             return (
-              <>
+              <Fragment key={t.id}>
                 <tr key={t.id} className="border-b border-border">
                   <td className="px-2.5 py-2 text-text">{fmtDate(t.entryTime)}</td>
                   <td className="px-2.5 py-2 text-text">{t.symbol}</td>
@@ -92,7 +92,7 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             );
           })}
         </tbody>

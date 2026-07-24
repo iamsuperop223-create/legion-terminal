@@ -136,7 +136,11 @@ export function fmtDate(d: string): string {
 }
 
 export function dayKey(d: string): string {
-  return new Date(d).toISOString().slice(0, 10);
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function uid(): string {
