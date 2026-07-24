@@ -1,10 +1,12 @@
-import { LayoutDashboard, ListOrdered, CalendarDays, BarChart3, ShieldCheck, Settings, BookOpen } from "lucide-react";
+import { LayoutDashboard, ListOrdered, CalendarDays, BarChart3, ShieldCheck, Settings, BookOpen, FileText, Globe } from "lucide-react";
 
 const items = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { id: "log", icon: ListOrdered, label: "Trade Log" },
   { id: "calendar", icon: CalendarDays, label: "Calendar" },
   { id: "stats", icon: BarChart3, label: "Statistics" },
+  { id: "rollups", icon: FileText, label: "Rollup Reports" },
+  { id: "econ", icon: Globe, label: "Economic Calendar" },
   { id: "rules", icon: ShieldCheck, label: "Rules" },
   { id: "attributes", icon: Settings, label: "Attributes" },
   { id: "journals", icon: BookOpen, label: "Journal" },

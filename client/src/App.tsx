@@ -10,6 +10,8 @@ import StatsView from "@/components/views/StatsView";
 import RulesView from "@/components/views/RulesView";
 import AttributesView from "@/components/views/AttributesView";
 import JournalsView from "@/components/views/JournalsView";
+import RollupsView from "@/components/views/RollupsView";
+import EconCalendarView from "@/components/views/EconCalendarView";
 import TopBar from "@/components/layout/TopBar";
 import IconRail from "@/components/layout/IconRail";
 import MobileNav from "@/components/layout/MobileNav";
@@ -65,6 +67,8 @@ export default function App() {
           {view === "log" && <TradeLog onEdit={(t) => setModalTrade(t)} />}
           {view === "calendar" && <CalendarView />}
           {view === "stats" && <StatsView />}
+          {view === "rollups" && <RollupsView />}
+          {view === "econ" && <EconCalendarView />}
           {view === "rules" && <RulesView />}
           {view === "attributes" && <AttributesView />}
           {view === "journals" && <JournalsView />}
