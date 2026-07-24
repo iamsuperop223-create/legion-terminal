@@ -119,7 +119,9 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
   }, [t.status, t.exitPrice, calcEntryPrice, t, t.exitLegs]);
 
   const displayResult = t.result || autoResult || "";
-  const displayPnlPoints = useMemo(() => {
+
+  // Gross PnL from raw prices (no fee) — the "auto-calculated" value
+  const grossPnlPoints = useMemo(() => {
     const legs = t.exitLegs;
     if (legs && legs.length > 0 && calcEntryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
@@ -128,16 +130,22 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       for (const leg of legs) {
         total += (leg.price - calcEntryPrice) * dir * leg.qty * sym.multiplier;
       }
-      return (total - (Number(t.fee) || 0)).toFixed(2);
+      return total;
     }
-    if (t.pnlPoints != null) return t.pnlPoints;
     if (t.status === "closed" && t.exitPrice != null && calcEntryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;
-      return ((t.exitPrice - calcEntryPrice) * dir * t.qty * sym.multiplier - (Number(t.fee) || 0)).toFixed(2);
+      return (t.exitPrice - calcEntryPrice) * dir * t.qty * sym.multiplier;
     }
+    return null;
+  }, [t.exitLegs, t.status, t.exitPrice, calcEntryPrice, t.direction, t.qty, t.symbol]);
+
+  // Net PnL shown in the field = user override or gross - fee
+  const displayPnlPoints = useMemo(() => {
+    if (t.pnlPoints != null) return t.pnlPoints;
+    if (grossPnlPoints != null) return (grossPnlPoints - (Number(t.fee) || 0)).toFixed(2);
     return "";
-  }, [t.pnlPoints, t.exitLegs, t.status, t.exitPrice, calcEntryPrice, t.direction, t.qty, t.symbol, t.fee]);
+  }, [t.pnlPoints, grossPnlPoints, t.fee]);
 
   const setAttrValue = (attributeDefinitionId: string, value: any) => {
     setT((prev: any) => {
@@ -404,8 +412,49 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
                   ))}
                 </div>
               </Row>
-              <Row label="PnL ($)">
-                <input type="number" value={displayPnlPoints} onChange={(e) => update("pnlPoints", e.target.value === "" ? null : Number(e.target.value))} className={inputCls} placeholder="override for partial fills" />
+              <Row label="PnL — broker">
+                <div className="flex flex-col items-end">
+                  {grossPnlPoints != null && (
+                    <div className="text-[9px] text-[#5B6478] mb-0.5">
+                      auto: {grossPnlPoints >= 0 ? "+" : ""}{grossPnlPoints.toFixed(2)} (gross)
+                    </div>
+                  )}
+                  <input
+                    type="number"
+                    value={displayPnlPoints}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? null : Number(e.target.value);
+                      if (val != null && grossPnlPoints != null) {
+                        const calculatedFee = Math.max(0, grossPnlPoints - val);
+                        update("fee", Number(calculatedFee.toFixed(2)));
+                        update("pnlPoints", val);
+                      } else {
+                        update("pnlPoints", val);
+                      }
+                    }}
+                    className={inputCls}
+                    placeholder="enter PnL from broker"
+                  />
+                </div>
+              </Row>
+              <Row label="Fee (auto)">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#5B6478]">$</span>
+                  <input
+                    type="number"
+                    value={t.fee || ""}
+                    onChange={(e) => {
+                      const fee = Number(e.target.value) || 0;
+                      update("fee", fee);
+                      // Recalculate pnlPoints from gross - fee
+                      if (grossPnlPoints != null) {
+                        update("pnlPoints", Number((grossPnlPoints - fee).toFixed(2)));
+                      }
+                    }}
+                    className={`${inputCls} !w-[120px]`}
+                    placeholder="0"
+                  />
+                </div>
               </Row>
             </>
           )}
