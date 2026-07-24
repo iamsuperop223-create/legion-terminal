@@ -22,7 +22,7 @@ interface EconEvent {
   actual?: string;
 }
 
-const Q3_2026_EVENTS: EconEvent[] = [
+export const Q3_2026_EVENTS: EconEvent[] = [
   // JULY 2026
   { date: "2026-07-01", time: "08:30", event: "ISM Manufacturing PMI", impact: "high", forecast: "50.2", previous: "49.8" },
   { date: "2026-07-02", time: "10:00", event: "JOLTS Job Openings", impact: "medium", forecast: "7.4M", previous: "7.6M" },
@@ -88,7 +88,7 @@ const Q3_2026_EVENTS: EconEvent[] = [
   { date: "2026-09-30", time: "10:00", event: "CB Consumer Confidence", impact: "medium" },
 ];
 
-const IMPACT_COLORS = {
+export const IMPACT_COLORS = {
   high: { bg: "bg-[#5C2A28]", text: "text-[#F1685E]", dot: "bg-[#F1685E]" },
   medium: { bg: "bg-[#3A2E18]", text: "text-[#D4A24E]", dot: "bg-[#D4A24E]" },
   low: { bg: "bg-[#1E3A2E]", text: "text-[#38D9A0]", dot: "bg-[#38D9A0]" },
