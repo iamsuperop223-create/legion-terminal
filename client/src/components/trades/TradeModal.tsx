@@ -67,7 +67,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       entryTime: (() => { const n = new Date(); const p = (x: number) => String(x).padStart(2, "0"); return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`; })(), exitTime: "", status: "open",
       stopTicks: "", takeProfitTicks: "", fee: 0, notes: "", movedToBreakeven: false,
       customChecks: {}, attributeValues: [], result: "", pnlPoints: "", grade: "",
-      analysis: "", exitNotes: "", screenshotUrl: "", exitLegs: null,
+      analysis: "", exitNotes: "", screenshotUrl: "", exitLegs: null, entryLegs: null,
     }
   );
   const [checked, setChecked] = useState(false);
@@ -88,48 +88,56 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return "—";
   }, [t.stopTicks, t.takeProfitTicks]);
 
+  const calcEntryPrice = useMemo(() => {
+    return (t.entryLegs && t.entryLegs.length > 0) ? (() => {
+      let totalCost = 0, totalQty = 0;
+      for (const leg of t.entryLegs) { totalCost += leg.price * leg.qty; totalQty += leg.qty; }
+      return totalQty > 0 ? totalCost / totalQty : t.entryPrice;
+    })() : t.entryPrice;
+  }, [t.entryLegs, t.entryPrice]);
+
   // Auto-calculate result when closed
   const autoResult = useMemo(() => {
     if (t.status !== "closed") return null;
     const legs = t.exitLegs;
-    if (legs && legs.length > 0 && t.entryPrice != null) {
+    if (legs && legs.length > 0 && calcEntryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;
       let total = 0;
       for (const leg of legs) {
-        total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+        total += (leg.price - calcEntryPrice) * dir * leg.qty * sym.multiplier;
       }
       if (total > 0) return "win";
       if (total < 0) return "loss";
       return "breakeven";
     }
-    if (t.exitPrice == null || t.entryPrice == null) return null;
+    if (t.exitPrice == null || calcEntryPrice == null) return null;
     const pnl = tradePnl(t);
     if (pnl > 0) return "win";
     if (pnl < 0) return "loss";
     return "breakeven";
-  }, [t.status, t.exitPrice, t.entryPrice, t, t.exitLegs]);
+  }, [t.status, t.exitPrice, calcEntryPrice, t, t.exitLegs]);
 
   const displayResult = t.result || autoResult || "";
   const displayPnlPoints = useMemo(() => {
     const legs = t.exitLegs;
-    if (legs && legs.length > 0 && t.entryPrice != null) {
+    if (legs && legs.length > 0 && calcEntryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;
       let total = 0;
       for (const leg of legs) {
-        total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+        total += (leg.price - calcEntryPrice) * dir * leg.qty * sym.multiplier;
       }
-      return total.toFixed(2);
+      return (total - (Number(t.fee) || 0)).toFixed(2);
     }
     if (t.pnlPoints != null) return t.pnlPoints;
-    if (t.status === "closed" && t.exitPrice != null && t.entryPrice != null) {
+    if (t.status === "closed" && t.exitPrice != null && calcEntryPrice != null) {
       const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
       const dir = t.direction === "long" ? 1 : -1;
-      return ((t.exitPrice - t.entryPrice) * dir * t.qty * sym.multiplier).toFixed(2);
+      return ((t.exitPrice - calcEntryPrice) * dir * t.qty * sym.multiplier - (Number(t.fee) || 0)).toFixed(2);
     }
     return "";
-  }, [t.pnlPoints, t.exitLegs, t.status, t.exitPrice, t.entryPrice, t.direction, t.qty, t.symbol]);
+  }, [t.pnlPoints, t.exitLegs, t.status, t.exitPrice, calcEntryPrice, t.direction, t.qty, t.symbol, t.fee]);
 
   const setAttrValue = (attributeDefinitionId: string, value: any) => {
     setT((prev: any) => {
@@ -216,6 +224,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       analysis: t.analysis || null,
       exitNotes: t.exitNotes || null,
       exitLegs: t.exitLegs && t.exitLegs.length > 0 ? JSON.stringify(t.exitLegs) : null,
+      entryLegs: t.entryLegs && t.entryLegs.length > 0 ? JSON.stringify(t.entryLegs) : null,
       screenshotUrl: t.screenshotUrl || null,
     };
     if (trade?.id) {
@@ -269,6 +278,45 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
           <Row label="Entry price">
             <input type="number" value={t.entryPrice} onChange={(e) => update("entryPrice", e.target.value)} className={inputCls} />
           </Row>
+
+          {/* ── Entry Legs (multi-fill entries) ── */}
+          <SectionTitle>Entry Legs (optional — for multi-fill entries)</SectionTitle>
+          <div className="text-[10px] text-[#5B6478] mb-2">Add multiple fills if you got filled at different prices. Weighted avg is used for PnL.</div>
+          {(t.entryLegs || []).map((leg: any, idx: number) => (
+            <div key={idx} className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] text-[#8891A3] w-4">#{idx + 1}</span>
+              <div className="flex-1 flex gap-2">
+                <div className="flex-1">
+                  <div className="text-[9px] text-[#5B6478] mb-0.5">Price</div>
+                  <input type="number" value={leg.price} onChange={(e) => {
+                    const legs = [...(t.entryLegs || [])];
+                    legs[idx] = { ...legs[idx], price: Number(e.target.value) };
+                    update("entryLegs", legs);
+                  }} className={`${inputCls} !w-full`} />
+                </div>
+                <div className="w-16">
+                  <div className="text-[9px] text-[#5B6478] mb-0.5">Qty</div>
+                  <input type="number" value={leg.qty} onChange={(e) => {
+                    const legs = [...(t.entryLegs || [])];
+                    legs[idx] = { ...legs[idx], qty: Number(e.target.value) };
+                    update("entryLegs", legs);
+                  }} className={`${inputCls} !w-full`} />
+                </div>
+                <button onClick={() => {
+                  const legs = (t.entryLegs || []).filter((_: any, i: number) => i !== idx);
+                  update("entryLegs", legs.length > 0 ? legs : null);
+                }} className="text-[#F1685E] hover:text-[#ff4444] mt-4 text-xs">✕</button>
+              </div>
+            </div>
+          ))}
+          {calcEntryPrice != null && calcEntryPrice !== t.entryPrice && (
+            <div className="text-[10px] text-[#D4A24E] mb-2">Weighted avg: {calcEntryPrice.toFixed(2)}</div>
+          )}
+          <button onClick={() => {
+            const legs = [...(t.entryLegs || []), { price: 0, qty: 0 }];
+            update("entryLegs", legs);
+          }} className={`${pillCls} bg-[#1A2029] text-[#38D9A0] border border-[#1E5844] w-full text-left`}>+ Add Entry Leg</button>
+
           {t.status === "closed" && (
             <Row label="Exit price">
               <input type="number" value={t.exitPrice} onChange={(e) => update("exitPrice", e.target.value)} className={inputCls} />

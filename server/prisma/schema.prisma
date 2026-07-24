@@ -105,6 +105,7 @@ model Trade {
   result           String?   // win | loss | breakeven
   pnlPoints        Float?
   exitLegs         String?   // JSON array: [{price, qty, time}] for partial fills
+  entryLegs        String?   // JSON array: [{price, qty}] for multi-fill entries
   grade            String?   // A+, A, B, C
   analysis         String?
   exitNotes        String?

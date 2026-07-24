@@ -5,22 +5,32 @@ const SYMBOLS: Record<string, { multiplier: number }> = {
   MES: { multiplier: 5 },
 };
 
+function weightedEntryPrice(entryLegs: { price: number; qty: number }[]): number {
+  let totalCost = 0;
+  let totalQty = 0;
+  for (const leg of entryLegs) {
+    totalCost += leg.price * leg.qty;
+    totalQty += leg.qty;
+  }
+  return totalQty > 0 ? totalCost / totalQty : 0;
+}
+
 export function tradePnl(t: any): number {
   if (t.status !== "closed") return 0;
   const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
+  const dir = t.direction === "long" ? 1 : -1;
+  const entryPrice = (t.entryLegs && t.entryLegs.length > 0) ? weightedEntryPrice(t.entryLegs) : t.entryPrice;
   const legs = t.exitLegs;
-  if (legs && legs.length > 0 && t.entryPrice != null) {
-    const dir = t.direction === "long" ? 1 : -1;
+  if (legs && legs.length > 0 && entryPrice != null) {
     let total = 0;
     for (const leg of legs) {
-      total += (leg.price - t.entryPrice) * dir * leg.qty * sym.multiplier;
+      total += (leg.price - entryPrice) * dir * leg.qty * sym.multiplier;
     }
     return total - (t.fee || 0);
   }
   if (t.pnlPoints != null) return t.pnlPoints - (t.fee || 0);
-  if (t.exitPrice == null) return 0;
-  const dir = t.direction === "long" ? 1 : -1;
-  return (t.exitPrice - (t.entryPrice || 0)) * dir * t.qty * sym.multiplier - (t.fee || 0);
+  if (t.exitPrice == null || entryPrice == null) return 0;
+  return (t.exitPrice - entryPrice) * dir * t.qty * sym.multiplier - (t.fee || 0);
 }
 
 export function fmt$(n: number): string {
