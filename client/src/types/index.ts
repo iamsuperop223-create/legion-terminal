@@ -125,6 +125,8 @@ export function tradePnl(t: Trade): number {
   const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
   const dir = t.direction === "long" ? 1 : -1;
   const entryPrice = (t.entryLegs && t.entryLegs.length > 0) ? weightedEntryPrice(t.entryLegs) : t.entryPrice;
+
+  // Compute from raw exit data when available (always subtracts fee)
   const legs = t.exitLegs;
   if (legs && legs.length > 0 && entryPrice != null) {
     let total = 0;
@@ -133,9 +135,13 @@ export function tradePnl(t: Trade): number {
     }
     return total - (t.fee || 0);
   }
-  if (t.pnlPoints != null) return t.pnlPoints - (t.fee || 0);
-  if (t.exitPrice == null || entryPrice == null) return 0;
-  return (t.exitPrice - entryPrice) * dir * t.qty * sym.multiplier - (t.fee || 0);
+  if (t.exitPrice != null && entryPrice != null) {
+    return (t.exitPrice - entryPrice) * dir * t.qty * sym.multiplier - (t.fee || 0);
+  }
+
+  // Fallback: manual PnL override (no exit data)
+  if (t.pnlPoints != null) return t.pnlPoints;
+  return 0;
 }
 
 export function fmt$(n: number): string {

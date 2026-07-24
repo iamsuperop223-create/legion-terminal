@@ -203,6 +203,39 @@ router.put("/:id", async (req: AuthRequest, res) => {
   }
 });
 
+// Bulk set fee on all closed trades for an account
+router.post("/bulk-fee", async (req: AuthRequest, res) => {
+  try {
+    const { accountId, fee } = z.object({
+      accountId: z.string(),
+      fee: z.number().min(0),
+    }).parse(req.body);
+
+    const prisma = req.prisma;
+
+    const account = await prisma.tradingAccount.findFirst({
+      where: { id: accountId, userId: req.userId },
+    });
+    if (!account) {
+      res.status(404).json({ error: "Account not found" });
+      return;
+    }
+
+    const result = await prisma.trade.updateMany({
+      where: { accountId, status: "closed" },
+      data: { fee },
+    });
+
+    res.json({ updated: result.count });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    res.status(500).json({ error: "Failed to bulk update fees" });
+  }
+});
+
 // Delete trade
 router.delete("/:id", async (req: AuthRequest, res) => {
   try {

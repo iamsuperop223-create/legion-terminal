@@ -109,6 +109,13 @@ class ApiClient {
     return this.request(`/api/trades/${id}`, { method: "DELETE" });
   }
 
+  async bulkSetFee(accountId: string, fee: number) {
+    return this.request<{ updated: number }>("/api/trades/bulk-fee", {
+      method: "POST",
+      body: JSON.stringify({ accountId, fee }),
+    });
+  }
+
   async setTradeAttribute(tradeId: string, attributeDefinitionId: string, value: any) {
     return this.request(`/api/trades/${tradeId}/attributes`, {
       method: "POST",

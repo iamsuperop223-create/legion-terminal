@@ -1,18 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { Card, StatBox, Pill } from "@/components/ui/Card";
 import { RiskGauge } from "@/components/ui/RiskGauge";
 import { TradeTable } from "@/components/trades/TradeTable";
 import { tradePnl, fmt$, dayKey } from "@/types";
 import { Q3_2026_EVENTS, IMPACT_COLORS } from "./EconCalendarView";
-import { Clock, ChevronRight } from "lucide-react";
+import { Clock, ChevronRight, DollarSign } from "lucide-react";
 
 interface Props {
   onEdit: (trade: any) => void;
 }
 
 export default function Dashboard({ onEdit }: Props) {
-  const { trades, rules, accounts, activeAccountId } = useAppStore();
+  const { trades, rules, accounts, activeAccountId, bulkSetFee } = useAppStore();
+  const [feeModal, setFeeModal] = useState(false);
+  const [feeInput, setFeeInput] = useState("");
+  const [feeLoading, setFeeLoading] = useState(false);
   const activeAccount = accounts.find((a) => a.id === activeAccountId);
   const closed = trades.filter((t) => t.status === "closed");
   const open = trades.filter((t) => t.status === "open");
@@ -57,6 +60,21 @@ export default function Dashboard({ onEdit }: Props) {
           />
         </div>
       </div>
+
+      {/* Fee Quick-Set */}
+      {closed.length > 0 && (
+        <Card className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-textDim">
+              <DollarSign size={13} />
+              <span>Fee per trade: {closed.some((t) => t.fee > 0) ? fmt$(closed[0].fee) : "not set"}</span>
+            </div>
+            <button onClick={() => setFeeModal(true)} className="text-[11px] px-3 py-1.5 rounded-lg bg-surface2 text-textDim hover:text-text transition font-semibold">
+              Set Fee (all trades)
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Economic Events — Today + Tomorrow */}
       {hasAnyEvents && (
@@ -120,6 +138,46 @@ export default function Dashboard({ onEdit }: Props) {
           />
         )}
       </Card>
+
+      {/* Bulk Fee Modal */}
+      {feeModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={() => setFeeModal(false)}>
+          <div className="bg-[#11161F] border border-[#232B38] rounded-xl p-5 w-[360px]" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-bold mb-3">Set Fee for All Trades</div>
+            <div className="text-[11px] text-[#5B6478] mb-3">
+              Applies the same fee to every closed trade. This is subtracted from each trade's PnL.
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs text-[#8891A3]">$</span>
+              <input
+                type="number"
+                value={feeInput}
+                onChange={(e) => setFeeInput(e.target.value)}
+                placeholder="e.g. 4.50"
+                className="bg-[#1A2029] border border-[#232B38] rounded-lg text-[#E7EAEF] px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-[#D4A24E]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={feeLoading || !feeInput}
+                onClick={async () => {
+                  setFeeLoading(true);
+                  const count = await bulkSetFee(Number(feeInput));
+                  setFeeLoading(false);
+                  setFeeModal(false);
+                  setFeeInput("");
+                }}
+                className="flex-1 bg-[#D4A24E] text-[#1A1206] rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-50"
+              >
+                {feeLoading ? "Applying..." : `Apply to ${closed.length} trades`}
+              </button>
+              <button onClick={() => setFeeModal(false)} className="bg-transparent border border-[#232B38] text-[#8891A3] rounded-lg px-3 py-2 text-xs">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
