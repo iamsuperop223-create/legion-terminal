@@ -15,6 +15,7 @@ const RULE_TYPES = [
   { value: "scaleOut", label: "Scale Out Range" },
   { value: "maxDailyProfit", label: "Daily Profit Target" },
   { value: "losingDayBreak", label: "Losing Day Break" },
+  { value: "lossStreakThrottle", label: "Loss Streak Throttle" },
   { value: "custom", label: "Custom Checklist" },
 ];
 
@@ -35,6 +36,7 @@ export default function RulesView() {
     if (newRuleType === "scaleOut") { params.minPercent = 30; params.maxPercent = 50; }
     if (newRuleType === "maxDailyProfit") params.amount = 500;
     if (newRuleType === "losingDayBreak") { params.consecutiveDays = 3; params.breakDays = 1; }
+    if (newRuleType === "lossStreakThrottle") params.threshold = 3;
     await createRule({ name: newRuleName.trim(), type: newRuleType, params });
     setNewRuleName("");
     setNewRuleType("custom");
@@ -106,6 +108,9 @@ export default function RulesView() {
                     )}
                     {r.type === "losingDayBreak" && (
                       <>after <input type="number" value={r.params.consecutiveDays || 3} onChange={(e) => updateField(r.id, "params.consecutiveDays", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" /> losing days, take <input type="number" value={r.params.breakDays || 1} onChange={(e) => updateField(r.id, "params.breakDays", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" /> day break</>
+                    )}
+                    {r.type === "lossStreakThrottle" && (
+                      <>flag after <input type="number" value={r.params.threshold || 3} onChange={(e) => updateField(r.id, "params.threshold", Number(e.target.value))} className="bg-surface border border-border rounded px-1.5 py-0.5 text-text text-[11px] font-mono w-14" /> consecutive losses</>
                     )}
                     {r.type === "custom" && "manual checklist item"}
                   </div>

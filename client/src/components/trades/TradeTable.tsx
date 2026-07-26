@@ -43,8 +43,32 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
                     <Pill tone={t.direction === "long" ? "green" : "red"}>{t.direction}</Pill>
                   </td>
                   <td className="px-2.5 py-2 font-mono">{t.qty}</td>
-                  <td className="px-2.5 py-2 font-mono">{t.entryPrice}</td>
-                  <td className="px-2.5 py-2 font-mono">{t.status === "closed" ? t.exitPrice : "—"}</td>
+                  <td className="px-2.5 py-2 font-mono">
+                    {t.entryLegs && t.entryLegs.length > 1 ? (
+                      <span>
+                        {(() => {
+                          let totalCost = 0, totalQty = 0;
+                          for (const leg of t.entryLegs) { totalCost += leg.price * leg.qty; totalQty += leg.qty; }
+                          return totalQty > 0 ? (totalCost / totalQty).toFixed(2) : t.entryPrice;
+                        })()}
+                        <span className="text-[10px] text-textFaint ml-1">({t.entryLegs.length} fills)</span>
+                      </span>
+                    ) : t.entryPrice}
+                  </td>
+                  <td className="px-2.5 py-2 font-mono">
+                    {t.status === "closed" ? (
+                      t.exitLegs && t.exitLegs.length > 1 ? (
+                        <span>
+                          {(() => {
+                            let total = 0, totalQty = 0;
+                            for (const leg of t.exitLegs) { total += leg.price * leg.qty; totalQty += leg.qty; }
+                            return totalQty > 0 ? (total / totalQty).toFixed(2) : "—";
+                          })()}
+                          <span className="text-[10px] text-textFaint ml-1">({t.exitLegs.length} legs)</span>
+                        </span>
+                      ) : t.exitPrice
+                    ) : "—"}
+                  </td>
                   <td className={`px-2.5 py-2 font-mono font-semibold ${t.status !== "closed" ? "text-textFaint" : pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
                     {t.status === "closed" ? fmt$(pnl) : "OPEN"}
                   </td>

@@ -192,6 +192,22 @@ export function evaluateTradeRules(trade: any, rules: any[], allTrades?: any[]):
 
     } else if (r.type === "custom") {
       results.push({ rule: r, pass: !!trade.customChecks?.[r.id], detail: trade.customChecks?.[r.id] ? "followed" : "not marked" });
+
+    } else if (r.type === "lossStreakThrottle") {
+      if (trade.status !== "closed") return;
+      const threshold = params.threshold || 3;
+      const dk = dayKey(trade.exitTime || trade.entryTime);
+      const dayTrades = closedTrades
+        .filter((t: any) => dayKey(t.exitTime || t.entryTime) === dk)
+        .sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+      const tradeIdx = dayTrades.findIndex((t: any) => t.id === trade.id);
+      if (tradeIdx < 0) return;
+      let streak = 0;
+      for (let i = tradeIdx; i >= 0; i--) {
+        if (tradePnl(dayTrades[i]) < 0) streak++;
+        else break;
+      }
+      results.push({ rule: r, pass: streak < threshold, detail: streak >= threshold ? `${streak} consecutive losses today (threshold: ${threshold})` : `${streak} consecutive loss${streak !== 1 ? "es" : ""} — ok` });
     }
   });
   return results;
@@ -260,6 +276,18 @@ export function computeDailyCompliance(trades: any[], rules: any[]): Record<stri
         }
         const shouldBreak = streak >= consecDays;
         ruleResults.push({ rule: r, pass: !shouldBreak, detail: shouldBreak ? `Should be on break (${streak} losing days prior)` : `${streak} losing days prior — ok` });
+      }
+
+      if (r.type === "lossStreakThrottle" && dayTrades.length > 0) {
+        const threshold = params.threshold || 3;
+        const sorted = [...dayTrades].sort((a: any, b: any) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+        let maxStreak = 0;
+        let streak = 0;
+        for (const t of sorted) {
+          if (tradePnl(t) < 0) { streak++; maxStreak = Math.max(maxStreak, streak); }
+          else streak = 0;
+        }
+        ruleResults.push({ rule: r, pass: maxStreak < threshold, detail: maxStreak >= threshold ? `Max streak: ${maxStreak} losses (threshold: ${threshold})` : `Max streak: ${maxStreak} — ok` });
       }
     });
 

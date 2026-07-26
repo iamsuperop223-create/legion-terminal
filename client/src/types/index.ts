@@ -73,7 +73,7 @@ export interface Rule {
   id: string;
   accountId: string;
   name: string;
-  type: "maxContracts" | "stopRange" | "dailyLossLimit" | "breakeven" | "custom" | "maxTradesPerDay" | "maxTradesPerSession" | "breakevenAtR" | "scaleOut" | "maxDailyProfit" | "losingDayBreak";
+  type: "maxContracts" | "stopRange" | "dailyLossLimit" | "breakeven" | "custom" | "maxTradesPerDay" | "maxTradesPerSession" | "breakevenAtR" | "scaleOut" | "maxDailyProfit" | "losingDayBreak" | "lossStreakThrottle";
   params: Record<string, any>;
   active: boolean;
 }

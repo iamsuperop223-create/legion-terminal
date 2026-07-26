@@ -34,9 +34,9 @@ router.post("/register", async (req: AuthRequest, res) => {
       data: { email, passwordHash, name, provider: "local" },
     });
 
-    // Create default trading account
+    // Create default trading account (balance uses schema default: 25000)
     await prisma.tradingAccount.create({
-      data: { userId: user.id, name: "Main Account", type: "sim", balance: 10000 },
+      data: { userId: user.id, name: "Main Account", type: "sim" },
     });
 
     // Create default settings

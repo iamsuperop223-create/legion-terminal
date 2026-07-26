@@ -45,6 +45,9 @@ export default function StatsView() {
   const bySymbol: Record<string, number> = {};
   closed.forEach((t) => { bySymbol[t.symbol] = (bySymbol[t.symbol] || 0) + tradePnl(t); });
 
+  // Session performance breakdown
+  const sessionRows = useMemo(() => computeGroupedByAutoAttr(trades, "session"), [trades]);
+
   // Grouped stats
   const customGroupable = attributes.filter((a) => a.active);
   const allGroupOptions = [
@@ -117,6 +120,73 @@ export default function StatsView() {
           </div>
         )}
       </Card>
+
+      {/* Session Performance */}
+      {sessionRows.length > 0 && (
+        <Card className="p-4">
+          <div className="text-xs text-textFaint uppercase tracking-wider mb-3">Session performance</div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center px-3 py-1 text-[10px] text-textFaint uppercase tracking-wider">
+              <span className="flex-1">Session</span>
+              <span className="w-16 text-right">Trades</span>
+              <span className="w-20 text-right">Win Rate</span>
+              <span className="w-20 text-right">Avg PnL</span>
+              <span className="w-16 text-right">PF</span>
+              <span className="w-24 text-right">Total PnL</span>
+            </div>
+            {sessionRows.map((r) => (
+              <div key={r.key} className="flex items-center px-3 py-2 bg-surface2 rounded-lg text-sm">
+                <span className="flex-1 font-semibold">{r.key}</span>
+                <span className="w-16 text-right font-mono text-textDim">{r.count}</span>
+                <span className={`w-20 text-right font-mono ${r.winRate >= 0.5 ? "text-accent-green" : "text-accent-red"}`}>
+                  {Math.round(r.winRate * 100)}%
+                </span>
+                <span className={`w-20 text-right font-mono ${r.avgPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  {fmt$(r.avgPnl)}
+                </span>
+                <span className="w-16 text-right font-mono text-textDim">
+                  {r.profitFactor >= 999 ? "∞" : r.profitFactor.toFixed(1)}
+                </span>
+                <span className={`w-24 text-right font-mono font-bold ${r.totalPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                  {fmt$(r.totalPnl)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Order-Flow Attributes Performance */}
+      {customGroupable.length > 0 && (
+        <Card className="p-4">
+          <div className="text-xs text-textFaint uppercase tracking-wider mb-3">Order-flow attributes</div>
+          <div className="flex flex-col gap-3">
+            {customGroupable.map((attr) => {
+              const attrRows = computeGroupedStat(trades, attr);
+              if (attrRows.length === 0) return null;
+              return (
+                <div key={attr.id}>
+                  <div className="text-[11px] text-textDim font-semibold mb-1">{attr.name}</div>
+                  <div className="flex flex-col gap-1">
+                    {attrRows.map((r) => (
+                      <div key={r.key} className="flex items-center px-3 py-1.5 bg-surface2 rounded-lg text-xs">
+                        <span className="flex-1 truncate">{r.key}</span>
+                        <span className="w-12 text-right font-mono text-textDim">{r.count}</span>
+                        <span className={`w-16 text-right font-mono ${r.winRate >= 0.5 ? "text-accent-green" : "text-accent-red"}`}>
+                          {Math.round(r.winRate * 100)}%
+                        </span>
+                        <span className={`w-20 text-right font-mono font-bold ${r.totalPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                          {fmt$(r.totalPnl)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Grouped by attribute */}
       {allGroupOptions.length > 0 && (

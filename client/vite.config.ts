@@ -7,6 +7,10 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  test: {
+    globals: true,
+    environment: "node",
+  },
   server: {
     proxy: {
       "/api": { target: "http://localhost:3001", changeOrigin: true },

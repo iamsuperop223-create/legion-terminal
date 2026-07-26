@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { useAppStore } from "@/stores/appStore";
-import { Card } from "@/components/ui/Card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { tradePnl, fmt$, dayKey } from "@/types";
+
+const CELL_H = "h-9";
 
 export default function CalendarView() {
   const { trades } = useAppStore();
@@ -10,10 +11,12 @@ export default function CalendarView() {
   const closed = trades.filter((t) => t.status === "closed");
 
   const byDay = useMemo(() => {
-    const m: Record<string, number> = {};
+    const m: Record<string, { pnl: number; count: number }> = {};
     closed.forEach((t) => {
       const k = dayKey(t.exitTime || t.entryTime);
-      m[k] = (m[k] || 0) + tradePnl(t);
+      if (!m[k]) m[k] = { pnl: 0, count: 0 };
+      m[k].pnl += tradePnl(t);
+      m[k].count += 1;
     });
     return m;
   }, [closed]);
@@ -27,58 +30,106 @@ export default function CalendarView() {
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  const rows: ((number | null)[])[] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+
+  const weekTotals = useMemo(() => {
+    return rows.map((row) => {
+      let pnl = 0;
+      let count = 0;
+      row.forEach((d) => {
+        if (!d) return;
+        const k = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const day = byDay[k];
+        if (day) { pnl += day.pnl; count += day.count; }
+      });
+      return { pnl, count };
+    });
+  }, [rows, byDay, year, month]);
+
   const monthPnl = Object.entries(byDay)
     .filter(([k]) => k.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`))
-    .reduce((a, [, v]) => a + v, 0);
+    .reduce((a, [, v]) => a + v.pnl, 0);
+
+  let weekNum = 0;
 
   return (
-    <div className="p-5">
-      <Card className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="text-textDim hover:text-text transition">
-              <ChevronLeft size={18} />
-            </button>
-            <div className="font-bold text-base">{first.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</div>
-            <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="text-textDim hover:text-text transition">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          <div className={`font-mono font-bold ${monthPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
-            {fmt$(monthPnl)}
-          </div>
+    <div className="p-4 self-start w-full">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="text-textDim hover:text-text transition">
+            <ChevronLeft size={16} />
+          </button>
+          <div className="font-bold text-sm">{first.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</div>
+          <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="text-textDim hover:text-text transition">
+            <ChevronRight size={16} />
+          </button>
         </div>
-
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="text-center text-[11px] text-textFaint">{d}</div>
-          ))}
+        <div className={`font-mono font-bold text-sm ${monthPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+          {fmt$(monthPnl)}
         </div>
+      </div>
 
-        <div className="grid grid-cols-7 gap-1.5">
-          {cells.map((d, i) => {
-            if (!d) return <div key={i} />;
-            const k = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            const pnl = byDay[k];
-            const has = pnl !== undefined;
-            return (
-              <div
-                key={i}
-                className={`aspect-square rounded-lg border border-border flex flex-col items-center justify-center p-1 ${
-                  has ? (pnl >= 0 ? "bg-accent-greenDim" : "bg-accent-redDim") : "bg-surface2"
-                }`}
-              >
-                <div className="text-[11px] text-textFaint">{d}</div>
-                {has && (
-                  <div className={`font-mono text-[11px] font-bold ${pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
-                    {fmt$(pnl)}
+      <div className="grid grid-cols-7 gap-px mb-px">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <div key={d} className="text-center text-[10px] text-textFaint uppercase tracking-wider py-0.5">{d}</div>
+        ))}
+      </div>
+
+      {rows.map((row, rowIdx) => {
+        const isLast = rowIdx === rows.length - 1;
+        const hasSat = row[6] !== null;
+        const wt = weekTotals[rowIdx];
+        if (hasSat) weekNum++;
+        const displayWeek = hasSat ? weekNum : weekNum;
+
+        return (
+          <div key={rowIdx} className="grid grid-cols-7 gap-px mb-px">
+            {row.map((d, i) => {
+              if (!d) return <div key={i} className={`${CELL_H}`} />;
+              const k = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+              const dayData = byDay[k];
+              const has = dayData !== undefined;
+              const isSat = i === 6;
+
+              if (isSat) {
+                const wtPnl = wt.pnl;
+                const wtCount = wt.count;
+                return (
+                  <div
+                    key={i}
+                    className={`${CELL_H} rounded border border-border flex flex-col items-center justify-center overflow-hidden ${
+                      wtPnl !== 0 ? (wtPnl > 0 ? "bg-accent-greenDim" : "bg-accent-redDim") : "bg-surface2"
+                    }`}
+                  >
+                    <div className="text-[9px] text-textFaint leading-none font-semibold">Wk {displayWeek}</div>
+                    <div className={`font-mono text-[10px] font-bold leading-tight mt-0.5 ${wtPnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                      {fmt$(wtPnl)}
+                    </div>
+                    <div className="text-[8px] text-textFaint leading-none mt-0.5">{wtCount} trades</div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+                );
+              }
+
+              return (
+                <div
+                  key={i}
+                  className={`${CELL_H} rounded border border-border flex flex-col items-center justify-center overflow-hidden ${
+                    has ? (dayData!.pnl >= 0 ? "bg-accent-greenDim" : "bg-accent-redDim") : "bg-surface2"
+                  }`}
+                >
+                  <div className="text-[11px] text-textFaint leading-none">{d}</div>
+                  {has && (
+                    <div className={`font-mono text-[10px] font-bold leading-tight mt-0.5 ${dayData!.pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                      {fmt$(dayData!.pnl)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
