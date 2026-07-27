@@ -10,6 +10,7 @@ RUN npm run build
 # Build server
 WORKDIR /app/server
 COPY server/package*.json ./
+COPY server/prisma ./prisma/
 RUN npm ci
 COPY server ./
 RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
@@ -20,4 +21,4 @@ RUN npm run build
 WORKDIR /app/server
 ENV NODE_ENV=production
 EXPOSE 3001
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && node dist/index.js"]
