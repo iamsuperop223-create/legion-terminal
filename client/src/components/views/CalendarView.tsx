@@ -54,7 +54,7 @@ export default function CalendarView() {
   let weekNum = 0;
 
   return (
-    <div className="p-4 flex flex-col w-full h-full">
+    <div className="p-4 flex flex-col w-full flex-1 min-h-0">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="text-textDim hover:text-text transition">
