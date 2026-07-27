@@ -3,7 +3,7 @@ import { useAppStore } from "@/stores/appStore";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { tradePnl, fmt$, dayKey } from "@/types";
 
-const CELL_H = "h-9";
+const CELL_H = "h-full min-h-[100px]";
 
 export default function CalendarView() {
   const { trades } = useAppStore();
@@ -54,7 +54,7 @@ export default function CalendarView() {
   let weekNum = 0;
 
   return (
-    <div className="p-4 self-start w-full">
+    <div className="p-4 flex flex-col w-full h-full">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="text-textDim hover:text-text transition">
@@ -70,21 +70,22 @@ export default function CalendarView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px mb-px">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="text-center text-[10px] text-textFaint uppercase tracking-wider py-0.5">{d}</div>
-        ))}
-      </div>
+      <div className="flex-1 flex flex-col gap-px">
+        <div className="grid grid-cols-7 gap-px mb-px">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <div key={d} className="text-center text-[10px] text-textFaint uppercase tracking-wider py-0.5">{d}</div>
+          ))}
+        </div>
 
-      {rows.map((row, rowIdx) => {
-        const isLast = rowIdx === rows.length - 1;
-        const hasSat = row[6] !== null;
-        const wt = weekTotals[rowIdx];
-        if (hasSat) weekNum++;
-        const displayWeek = hasSat ? weekNum : weekNum;
+        {rows.map((row, rowIdx) => {
+          const isLast = rowIdx === rows.length - 1;
+          const hasSat = row[6] !== null;
+          const wt = weekTotals[rowIdx];
+          if (hasSat) weekNum++;
+          const displayWeek = hasSat ? weekNum : weekNum;
 
-        return (
-          <div key={rowIdx} className="grid grid-cols-7 gap-px mb-px">
+          return (
+            <div key={rowIdx} className="grid grid-cols-7 gap-px mb-px flex-1 min-h-0">
             {row.map((d, i) => {
               if (!d) return <div key={i} className={`${CELL_H}`} />;
               const k = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -130,6 +131,7 @@ export default function CalendarView() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
