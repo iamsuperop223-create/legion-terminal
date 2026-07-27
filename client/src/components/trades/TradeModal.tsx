@@ -220,38 +220,53 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
     return dt.toISOString();
   };
 
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const submit = async () => {
-    const cleaned: any = {
-      accountId: activeAccountId,
-      symbol: t.symbol,
-      direction: t.direction,
-      qty: Number(t.qty) || 0,
-      entryPrice: t.entryPrice === "" ? null : Number(t.entryPrice),
-      exitPrice: t.exitPrice === "" || t.exitPrice == null ? null : Number(t.exitPrice),
-      entryTime: toISOStringLocal(t.entryTime),
-      exitTime: toISOStringLocal(t.exitTime),
-      status: t.status,
-      fee: Number(t.fee) || 0,
-      notes: t.notes || "",
-      movedToBreakeven: t.movedToBreakeven || false,
-      customChecks: t.customChecks || {},
-      stopTicks: t.stopTicks === "" || t.stopTicks == null ? null : Number(t.stopTicks),
-      takeProfitTicks: t.takeProfitTicks === "" || t.takeProfitTicks == null ? null : Number(t.takeProfitTicks),
-      result: t.result || autoResult || null,
-      pnlPoints: displayPnlPoints ? Number(displayPnlPoints) : null,
-      grade: t.grade || null,
-      analysis: t.analysis || null,
-      exitNotes: t.exitNotes || null,
-      exitLegs: t.exitLegs && t.exitLegs.length > 0 ? JSON.stringify(t.exitLegs) : null,
-      entryLegs: t.entryLegs && t.entryLegs.length > 0 ? JSON.stringify(t.entryLegs) : null,
-      screenshotUrl: t.screenshotUrl || null,
-    };
-    if (trade?.id) {
-      await updateTrade(trade.id, cleaned);
-    } else {
-      await createTrade(cleaned);
+    if (!activeAccountId) {
+      setError("No account selected. Please create an account first.");
+      return;
     }
-    onSave();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const cleaned: any = {
+        accountId: activeAccountId,
+        symbol: t.symbol,
+        direction: t.direction,
+        qty: Number(t.qty) || 1,
+        entryPrice: t.entryPrice === "" ? null : Number(t.entryPrice),
+        exitPrice: t.exitPrice === "" || t.exitPrice == null ? null : Number(t.exitPrice),
+        entryTime: toISOStringLocal(t.entryTime),
+        exitTime: toISOStringLocal(t.exitTime),
+        status: t.status,
+        fee: Number(t.fee) || 0,
+        notes: t.notes || "",
+        movedToBreakeven: t.movedToBreakeven || false,
+        customChecks: t.customChecks || {},
+        stopTicks: t.stopTicks === "" || t.stopTicks == null ? null : Number(t.stopTicks),
+        takeProfitTicks: t.takeProfitTicks === "" || t.takeProfitTicks == null ? null : Number(t.takeProfitTicks),
+        result: t.result || autoResult || null,
+        pnlPoints: displayPnlPoints ? Number(displayPnlPoints) : null,
+        grade: t.grade || null,
+        analysis: t.analysis || null,
+        exitNotes: t.exitNotes || null,
+        exitLegs: t.exitLegs && t.exitLegs.length > 0 ? JSON.stringify(t.exitLegs) : null,
+        entryLegs: t.entryLegs && t.entryLegs.length > 0 ? JSON.stringify(t.entryLegs) : null,
+        screenshotUrl: t.screenshotUrl || null,
+      };
+      if (trade?.id) {
+        await updateTrade(trade.id, cleaned);
+      } else {
+        await createTrade(cleaned);
+      }
+      onSave();
+    } catch (err: any) {
+      setError(err.message || "Failed to save trade");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputCls = "bg-[#1A2029] border border-[#232B38] rounded-lg text-[#E7EAEF] px-3 py-2 text-sm font-mono w-[200px] focus:outline-none focus:border-[#D4A24E]";
@@ -620,9 +635,12 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-[#232B38] flex gap-2.5">
-          <button onClick={submit} className={`${pillCls} bg-[#D4A24E] text-[#1A1206] flex-1 font-bold`}>Save</button>
-          <button onClick={onClose} className={`${pillCls} bg-transparent border border-[#232B38] text-[#8891A3]`}>Cancel</button>
+        <div className="px-4 py-3 border-t border-[#232B38]">
+          {error && <div className="text-[#F1685E] text-xs font-mono mb-2">{error}</div>}
+          <div className="flex gap-2.5">
+            <button onClick={submit} disabled={submitting} className={`${pillCls} bg-[#D4A24E] text-[#1A1206] flex-1 font-bold ${submitting ? "opacity-50" : ""}`}>{submitting ? "Saving..." : "Save"}</button>
+            <button onClick={onClose} className={`${pillCls} bg-transparent border border-[#232B38] text-[#8891A3]`}>Cancel</button>
+          </div>
         </div>
       </div>
 

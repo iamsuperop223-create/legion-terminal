@@ -4,6 +4,7 @@ FROM node:20
 WORKDIR /app/client
 COPY client ./
 RUN npm install
+RUN npm rebuild
 RUN npm run build
 
 # Build server
