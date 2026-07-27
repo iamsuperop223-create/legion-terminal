@@ -3,6 +3,7 @@ FROM node:20
 # Build client
 WORKDIR /app/client
 COPY client/package*.json ./
+COPY client/.npmrc ./
 RUN npm ci
 COPY client ./
 RUN npm run build
