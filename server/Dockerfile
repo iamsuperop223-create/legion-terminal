@@ -3,7 +3,7 @@ FROM node:20
 # Build client
 WORKDIR /app/client
 COPY client ./
-RUN npm install --omit=optional
+RUN npm install
 RUN npm run build
 
 # Build server
