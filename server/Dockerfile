@@ -2,9 +2,8 @@ FROM node:20
 
 # Build client
 WORKDIR /app/client
-COPY client/package*.json ./
-RUN npm ci --omit=optional
 COPY client ./
+RUN npm install --omit=optional
 RUN npm run build
 
 # Build server
