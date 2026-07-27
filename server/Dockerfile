@@ -3,7 +3,7 @@ FROM node:20
 # Build client
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm install
+RUN npm ci
 COPY client ./
 RUN npm run build
 
@@ -20,4 +20,4 @@ RUN npm run build
 WORKDIR /app/server
 ENV NODE_ENV=production
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss 2>&1; echo 'Starting server...'; node dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && node dist/index.js"]
