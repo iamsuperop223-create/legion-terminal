@@ -3,15 +3,14 @@ FROM node:20
 # Build client
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm ci
+RUN npm ci --force
 COPY client ./
 RUN npm run build
 
 # Build server
 WORKDIR /app/server
 COPY server/package*.json ./
-COPY server/prisma ./prisma/
-RUN npm ci
+RUN npm ci --force
 COPY server ./
 RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
 RUN npx prisma generate
