@@ -20,4 +20,4 @@ RUN npm run build
 WORKDIR /app/server
 ENV NODE_ENV=production
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && node dist/index.js"]
+CMD ["node", "dist/index.js"]
