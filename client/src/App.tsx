@@ -41,6 +41,9 @@ export default function App() {
       loadTrades();
       loadRules();
     }
+    if (dataLoaded) {
+      loadJournals();
+    }
   }, [dataLoaded, activeAccountId]);
 
   if (loading) {
