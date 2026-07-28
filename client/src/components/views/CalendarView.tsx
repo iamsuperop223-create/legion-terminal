@@ -11,12 +11,16 @@ export default function CalendarView() {
   const closed = trades.filter((t) => t.status === "closed");
 
   const byDay = useMemo(() => {
-    const m: Record<string, { pnl: number; count: number }> = {};
+    const m: Record<string, { pnl: number; count: number; missed: number }> = {};
     closed.forEach((t) => {
       const k = dayKey(t.exitTime || t.entryTime);
-      if (!m[k]) m[k] = { pnl: 0, count: 0 };
-      m[k].pnl += tradePnl(t);
-      m[k].count += 1;
+      if (!m[k]) m[k] = { pnl: 0, count: 0, missed: 0 };
+      if (t.missed) {
+        m[k].missed += 1;
+      } else {
+        m[k].pnl += tradePnl(t);
+        m[k].count += 1;
+      }
     });
     return m;
   }, [closed]);
@@ -37,13 +41,14 @@ export default function CalendarView() {
     return rows.map((row) => {
       let pnl = 0;
       let count = 0;
+      let missed = 0;
       row.forEach((d) => {
         if (!d) return;
         const k = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const day = byDay[k];
-        if (day) { pnl += day.pnl; count += day.count; }
+        if (day) { pnl += day.pnl; count += day.count; missed += day.missed; }
       });
-      return { pnl, count };
+      return { pnl, count, missed };
     });
   }, [rows, byDay, year, month]);
 
@@ -108,6 +113,7 @@ export default function CalendarView() {
                       {fmt$(wtPnl)}
                     </div>
                     <div className="text-[8px] text-textFaint leading-none mt-0.5">{wtCount} trades</div>
+                    {wt.missed > 0 && <div className="text-[8px] text-accent-amber leading-none mt-0.5">{wt.missed} missed</div>}
                   </div>
                 );
               }
@@ -124,6 +130,9 @@ export default function CalendarView() {
                     <div className={`font-mono text-[10px] font-bold leading-tight mt-0.5 ${dayData!.pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
                       {fmt$(dayData!.pnl)}
                     </div>
+                  )}
+                  {dayData && dayData.missed > 0 && (
+                    <div className="text-[8px] text-accent-amber leading-none mt-0.5 font-semibold">M×{dayData.missed}</div>
                   )}
                 </div>
               );

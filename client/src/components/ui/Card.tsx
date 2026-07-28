@@ -33,8 +33,8 @@ export function Pill({ children, tone = "neutral" }: { children: React.ReactNode
   );
 }
 
-export function StatBox({ label, value, tone = "text" }: { label: string; value: React.ReactNode; tone?: "text" | "green" | "red" }) {
-  const color = tone === "green" ? "text-accent-green" : tone === "red" ? "text-accent-red" : "text-text";
+export function StatBox({ label, value, tone = "text" }: { label: string; value: React.ReactNode; tone?: "text" | "green" | "red" | "amber" }) {
+  const color = tone === "green" ? "text-accent-green" : tone === "red" ? "text-accent-red" : tone === "amber" ? "text-accent-amber" : "text-text";
   return (
     <Card className="p-4 flex-1 min-w-[130px]">
       <div className="text-[11px] text-textFaint uppercase tracking-wider mb-2">{label}</div>

@@ -16,6 +16,7 @@ function weightedEntryPrice(entryLegs: { price: number; qty: number }[]): number
 }
 
 export function tradePnl(t: any): number {
+  if (t.missed) return 0;
   if (t.status !== "closed") return 0;
   const sym = SYMBOLS[t.symbol] || { multiplier: 1 };
   const dir = t.direction === "long" ? 1 : -1;

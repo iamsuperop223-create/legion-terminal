@@ -45,6 +45,9 @@ export interface Trade {
   analysis?: string | null;
   exitNotes?: string | null;
   screenshotUrl?: string | null;
+  missed?: boolean;
+  pointsMissed?: number | null;
+  setupType?: string | null;
   attributeValues: AttributeValue[];
   createdAt: string;
   updatedAt: string;

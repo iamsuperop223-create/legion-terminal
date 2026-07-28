@@ -68,6 +68,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       stopTicks: "", takeProfitTicks: "", fee: 0, notes: "", movedToBreakeven: false,
       customChecks: {}, attributeValues: [], result: "", pnlPoints: "", grade: "",
       analysis: "", exitNotes: "", screenshotUrl: "", exitLegs: null, entryLegs: null,
+      missed: false, pointsMissed: "", setupType: "",
     }
   );
   const [checked, setChecked] = useState(false);
@@ -306,16 +307,54 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
               ))}
             </div>
           </Row>
-          <Row label="Contracts (qty)">
-            <input type="number" value={t.qty} onChange={(e) => update("qty", e.target.value)} className={inputCls} />
-          </Row>
-          <Row label="Entry price">
-            <input type="number" value={t.entryPrice} onChange={(e) => update("entryPrice", e.target.value)} className={inputCls} />
+          <Row label="Missed Setup">
+            <div className="flex gap-2">
+              <button onClick={() => { update("missed", !t.missed); if (!t.missed) { update("qty", ""); update("entryPrice", ""); update("exitPrice", ""); } }} className={`${pillCls} ${
+                t.missed ? "bg-[#3D3522] text-[#D4A24E] border border-[#5C4A1E]" : "bg-transparent text-[#8891A3] border border-[#232B38]"
+              }`}>{t.missed ? "MISSED" : "NO"}</button>
+            </div>
           </Row>
 
-          {/* ── Entry Legs (multi-fill entries) ── */}
-          <SectionTitle>Entry Legs (optional — for multi-fill entries)</SectionTitle>
-          <div className="text-[10px] text-[#5B6478] mb-2">Add multiple fills if you got filled at different prices. Weighted avg is used for PnL.</div>
+          {t.missed ? (
+            <>
+              <SectionTitle>Missed Setup Details</SectionTitle>
+              <Row label="What happened">
+                <input type="text" value={t.notes || ""} onChange={(e) => update("notes", e.target.value)} placeholder="saw the signal, hesitated, price ran" className={`${inputCls} !w-full`} />
+              </Row>
+              <Row label="What went through my head">
+                <textarea value={t.analysis || ""} onChange={(e) => update("analysis", e.target.value)} placeholder="the mental game..." rows={3} className={`${inputCls} !w-full resize-none`} />
+              </Row>
+              <Row label="Points missed">
+                <input type="number" value={t.pointsMissed || ""} onChange={(e) => update("pointsMissed", e.target.value)} placeholder="0" className={inputCls} />
+              </Row>
+              <Row label="Setup type">
+                <input type="text" value={t.setupType || ""} onChange={(e) => update("setupType", e.target.value)} placeholder="absorption, breakout, etc." className={inputCls} />
+              </Row>
+              <Row label="When you saw it">
+                <input type="datetime-local" value={t.entryTime} onChange={(e) => update("entryTime", e.target.value)} className={inputCls} />
+              </Row>
+              <Row label="Grade">
+                <div className="flex gap-2">
+                  {GRADES.map((g) => (
+                    <button key={g} onClick={() => update("grade", g)} className={`${pillCls} ${
+                      t.grade === g ? "bg-[#D4A24E] text-[#1A1206] font-bold" : "bg-[#1A2029] text-[#8891A3] border border-[#232B38]"
+                    }`}>{g}</button>
+                  ))}
+                </div>
+              </Row>
+            </>
+          ) : (
+            <>
+              <Row label="Contracts (qty)">
+                <input type="number" value={t.qty} onChange={(e) => update("qty", e.target.value)} className={inputCls} />
+              </Row>
+              <Row label="Entry price">
+                <input type="number" value={t.entryPrice} onChange={(e) => update("entryPrice", e.target.value)} className={inputCls} />
+              </Row>
+
+              {/* ── Entry Legs (multi-fill entries) ── */}
+              <SectionTitle>Entry Legs (optional — for multi-fill entries)</SectionTitle>
+              <div className="text-[10px] text-[#5B6478] mb-2">Add multiple fills if you got filled at different prices. Weighted avg is used for PnL.</div>
           {(t.entryLegs || []).map((leg: any, idx: number) => (
             <div key={idx} className="flex items-center gap-2 mb-2">
               <span className="text-[10px] text-[#8891A3] w-4">#{idx + 1}</span>
@@ -493,6 +532,8 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
               ))}
             </div>
           </Row>
+            </>
+          )}
 
           {/* ── Screenshot ── */}
           <SectionTitle>Screenshots</SectionTitle>

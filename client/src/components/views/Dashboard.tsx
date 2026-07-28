@@ -19,13 +19,15 @@ export default function Dashboard({ onEdit }: Props) {
   const [fixTimesLoading, setFixTimesLoading] = useState(false);
   const activeAccount = accounts.find((a) => a.id === activeAccountId);
   const closed = trades.filter((t) => t.status === "closed");
+  const realClosed = closed.filter((t) => !t.missed);
+  const missed = trades.filter((t) => t.status === "closed" && t.missed);
   const open = trades.filter((t) => t.status === "open");
-  const wins = closed.filter((t) => tradePnl(t) > 0);
-  const losses = closed.filter((t) => tradePnl(t) < 0);
-  const totalPnl = closed.reduce((a, t) => a + tradePnl(t), 0);
+  const wins = realClosed.filter((t) => tradePnl(t) > 0);
+  const losses = realClosed.filter((t) => tradePnl(t) < 0);
+  const totalPnl = realClosed.reduce((a, t) => a + tradePnl(t), 0);
   const currentBalance = (activeAccount?.balance || 0) + totalPnl;
   const today = dayKey(new Date().toISOString());
-  const pnlToday = closed
+  const pnlToday = realClosed
     .filter((t) => dayKey(t.exitTime || t.entryTime) === today)
     .reduce((a, t) => a + tradePnl(t), 0);
   const mllRule = rules.find((r) => r.type === "dailyLossLimit" && r.active);
@@ -53,12 +55,13 @@ export default function Dashboard({ onEdit }: Props) {
           <StatBox label="Open" value={open.length} />
           <StatBox label="Total PnL" value={fmt$(totalPnl)} tone={totalPnl >= 0 ? "green" : "red"} />
           <StatBox label="Balance" value={fmt$(currentBalance)} />
-          <StatBox label="Win rate" value={closed.length ? `${Math.round((wins.length / closed.length) * 100)}%` : "0%"} />
+          <StatBox label="Win rate" value={realClosed.length ? `${Math.round((wins.length / realClosed.length) * 100)}%` : "0%"} />
           <StatBox
             label="Avg win"
             value={wins.length ? fmt$(wins.reduce((a, t) => a + tradePnl(t), 0) / wins.length) : "$0.00"}
             tone="green"
           />
+          {missed.length > 0 && <StatBox label="Missed" value={`${missed.length} setups`} tone="amber" />}
         </div>
       </div>
 

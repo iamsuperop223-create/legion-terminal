@@ -7,7 +7,7 @@ function attrValuesForTrade(trade: Trade, attributeId: string) {
 }
 
 export function computeGroupedStat(trades: Trade[], attribute: AttributeDefinition) {
-  const closed = trades.filter((t) => t.status === "closed");
+  const closed = trades.filter((t) => t.status === "closed" && !t.missed);
   const buckets: Record<string, Trade[]> = {};
 
   closed.forEach((t) => {
@@ -45,7 +45,7 @@ export interface GroupedStat {
 }
 
 export function computeGroupedByAutoAttr(trades: Trade[], autoAttrId: string): GroupedStat[] {
-  const closed = trades.filter((t) => t.status === "closed");
+  const closed = trades.filter((t) => t.status === "closed" && !t.missed);
   const buckets: Record<string, Trade[]> = {};
 
   closed.forEach((t) => {

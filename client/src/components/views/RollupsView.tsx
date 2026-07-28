@@ -58,7 +58,7 @@ interface RollupData {
 }
 
 function computeRollups(trades: any[], rules: any[], period: Period): RollupData[] {
-  const closed = trades.filter((t) => t.status === "closed");
+  const closed = trades.filter((t) => t.status === "closed" && !t.missed);
   const grouped: Record<string, any[]> = {};
 
   closed.forEach((t) => {

@@ -46,6 +46,9 @@ const tradeSchema = z.object({
   analysis: z.string().nullable().optional(),
   exitNotes: z.string().nullable().optional(),
   screenshotUrl: z.string().nullable().optional(),
+  missed: z.boolean().default(false),
+  pointsMissed: toNum,
+  setupType: z.string().nullable().optional(),
 });
 
 function parseJson(str: string | null | undefined, fallback: any = {}) {
@@ -149,6 +152,9 @@ router.post("/", async (req: AuthRequest, res) => {
         analysis: data.analysis,
         exitNotes: data.exitNotes,
         screenshotUrl: data.screenshotUrl,
+        missed: data.missed,
+        pointsMissed: data.pointsMissed,
+        setupType: data.setupType,
       },
       include: { attributeValues: true },
     });

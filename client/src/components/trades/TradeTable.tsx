@@ -36,15 +36,15 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
             const isOpen = !!expanded[t.id];
             return (
               <Fragment key={t.id}>
-                <tr key={t.id} className="border-b border-border">
-                  <td className="px-2.5 py-2 text-text">{fmtDate(t.entryTime)}</td>
-                  <td className="px-2.5 py-2 text-text">{t.symbol}</td>
+                <tr key={t.id} className={`border-b ${t.missed ? "border-dashed border-accent-amber/30" : "border-border"}`}>
+                  <td className={`px-2.5 py-2 ${t.missed ? "text-textDim" : "text-text"}`}>{fmtDate(t.entryTime)}</td>
+                  <td className={`px-2.5 py-2 ${t.missed ? "text-textDim" : "text-text"}`}>{t.symbol}</td>
                   <td className="px-2.5 py-2">
                     <Pill tone={t.direction === "long" ? "green" : "red"}>{t.direction}</Pill>
                   </td>
-                  <td className="px-2.5 py-2 font-mono">{t.qty}</td>
-                  <td className="px-2.5 py-2 font-mono">
-                    {t.entryLegs && t.entryLegs.length > 1 ? (
+                  <td className={`px-2.5 py-2 font-mono ${t.missed ? "text-textFaint" : ""}`}>{t.missed ? "—" : t.qty}</td>
+                  <td className={`px-2.5 py-2 font-mono ${t.missed ? "text-textFaint" : ""}`}>{t.missed ? "—" : (
+                    t.entryLegs && t.entryLegs.length > 1 ? (
                       <span>
                         {(() => {
                           let totalCost = 0, totalQty = 0;
@@ -53,10 +53,10 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
                         })()}
                         <span className="text-[10px] text-textFaint ml-1">({t.entryLegs.length} fills)</span>
                       </span>
-                    ) : t.entryPrice}
-                  </td>
-                  <td className="px-2.5 py-2 font-mono">
-                    {t.status === "closed" ? (
+                    ) : t.entryPrice
+                  )}</td>
+                  <td className={`px-2.5 py-2 font-mono ${t.missed ? "text-textFaint" : ""}`}>
+                    {t.missed ? "—" : t.status === "closed" ? (
                       t.exitLegs && t.exitLegs.length > 1 ? (
                         <span>
                           {(() => {
@@ -69,11 +69,13 @@ export function TradeTable({ trades, onEdit, onDelete, rules = [], allTrades }: 
                       ) : t.exitPrice
                     ) : "—"}
                   </td>
-                  <td className={`px-2.5 py-2 font-mono font-semibold ${t.status !== "closed" ? "text-textFaint" : pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
-                    {t.status === "closed" ? fmt$(pnl) : "OPEN"}
+                  <td className={`px-2.5 py-2 font-mono font-semibold ${t.missed ? "text-accent-amber italic" : t.status !== "closed" ? "text-textFaint" : pnl >= 0 ? "text-accent-green" : "text-accent-red"}`}>
+                    {t.missed ? (t.pointsMissed ? `${t.pointsMissed}pts missed` : "MISSED") : t.status === "closed" ? fmt$(pnl) : "OPEN"}
                   </td>
                   <td className="px-2.5 py-2">
-                    {results.length === 0 ? (
+                    {t.missed ? (
+                      <span className="text-[11px] font-bold text-accent-amber bg-accent-amber/20 px-2 py-0.5 rounded-full">Missed</span>
+                    ) : results.length === 0 ? (
                       <span className="text-textFaint">—</span>
                     ) : fails.length === 0 ? (
                       <Pill tone="green">Pass</Pill>
