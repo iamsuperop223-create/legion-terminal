@@ -32,7 +32,8 @@ class ApiClient {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `Request failed: ${res.status}`);
+      console.error("[api] non-ok response:", res.status, body);
+      throw new Error(body.error || body.details?.map((d: any) => `${d.path?.join(".")}: ${d.message}`).join("; ") || `Request failed: ${res.status}`);
     }
 
     const json = await res.json().catch(() => null);
