@@ -91,7 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadTrades: async () => {
     const { activeAccountId } = get();
     const { trades } = await api.getTrades(activeAccountId || undefined);
-    set({ trades });
+    set({ trades: trades || [] });
   },
 
   createTrade: async (data) => {

@@ -239,7 +239,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         qty: Number(t.qty) || 1,
         entryPrice: t.entryPrice === "" ? null : Number(t.entryPrice),
         exitPrice: t.exitPrice === "" || t.exitPrice == null ? null : Number(t.exitPrice),
-        entryTime: toISOStringLocal(t.entryTime),
+        entryTime: toISOStringLocal(t.entryTime) || new Date().toISOString(),
         exitTime: toISOStringLocal(t.exitTime),
         status: t.status,
         fee: Number(t.fee) || 0,
@@ -256,6 +256,9 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         exitLegs: t.exitLegs && t.exitLegs.length > 0 ? JSON.stringify(t.exitLegs) : null,
         entryLegs: t.entryLegs && t.entryLegs.length > 0 ? JSON.stringify(t.entryLegs) : null,
         screenshotUrl: t.screenshotUrl || null,
+        missed: t.missed || false,
+        pointsMissed: t.pointsMissed === "" || t.pointsMissed == null ? null : Number(t.pointsMissed),
+        setupType: t.setupType || null,
       };
       if (trade?.id) {
         await updateTrade(trade.id, cleaned);
@@ -264,6 +267,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
       }
       onSave();
     } catch (err: any) {
+      console.error("Trade save failed:", err);
       setError(err.message || "Failed to save trade");
     } finally {
       setSubmitting(false);
@@ -677,7 +681,7 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         </div>
 
         <div className="px-4 py-3 border-t border-[#232B38]">
-          {error && <div className="text-[#F1685E] text-xs font-mono mb-2">{error}</div>}
+          {error && <div className="text-[#F1685E] text-xs font-mono mb-2 bg-[#5C2A28]/30 border border-[#5C2A28] rounded-lg px-3 py-2">{error}</div>}
           <div className="flex gap-2.5">
             <button onClick={submit} disabled={submitting} className={`${pillCls} bg-[#D4A24E] text-[#1A1206] flex-1 font-bold ${submitting ? "opacity-50" : ""}`}>{submitting ? "Saving..." : "Save"}</button>
             <button onClick={onClose} className={`${pillCls} bg-transparent border border-[#232B38] text-[#8891A3]`}>Cancel</button>

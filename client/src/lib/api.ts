@@ -35,7 +35,11 @@ class ApiClient {
       throw new Error(body.error || `Request failed: ${res.status}`);
     }
 
-    return res.json();
+    const json = await res.json().catch(() => null);
+    if (json === null || json === undefined) {
+      throw new Error("Empty response from server");
+    }
+    return json;
   }
 
   // Auth
