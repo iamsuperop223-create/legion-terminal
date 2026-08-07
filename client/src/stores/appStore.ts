@@ -95,13 +95,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     _loadTradesInFlight = (async () => {
       try {
         const { activeAccountId } = get();
-        console.log("[store] loadTrades: fetching for accountId=", activeAccountId);
         const { trades } = await api.getTrades(activeAccountId || undefined);
-        console.log("[store] loadTrades: received", trades?.length ?? 0, "trades");
         set({ trades: trades || [] });
       } catch (err) {
         console.error("[store] loadTrades failed:", err);
-        throw err;
       } finally {
         _loadTradesInFlight = null;
       }
@@ -111,20 +108,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createTrade: async (data) => {
     const { trade } = await api.createTrade(data);
-    console.log("[store] createTrade: server returned trade", trade?.id);
     set((state) => ({
       trades: [trade, ...state.trades.filter((t) => t.id !== trade.id)],
     }));
-    get().loadTrades();
+    // Socket event "trade:created" handles background sync
   },
 
   updateTrade: async (id, data) => {
     const { trade } = await api.updateTrade(id, data);
-    console.log("[store] updateTrade: server returned trade", trade?.id);
     set((state) => ({
       trades: state.trades.map((t) => (t.id === id ? trade : t)),
     }));
-    get().loadTrades();
+    // Socket event "trade:updated" handles background sync
   },
 
   deleteTrade: async (id) => {
@@ -132,7 +127,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       trades: state.trades.filter((t) => t.id !== id),
     }));
-    get().loadTrades();
+    // Socket event "trade:deleted" handles background sync
   },
 
   bulkSetFee: async (fee) => {
@@ -239,15 +234,12 @@ export function setupSocketListeners() {
   if (!socket) return;
 
   socket.on("trade:created", () => {
-    console.log("[socket] trade:created — triggering loadTrades");
     useAppStore.getState().loadTrades();
   });
   socket.on("trade:updated", () => {
-    console.log("[socket] trade:updated — triggering loadTrades");
     useAppStore.getState().loadTrades();
   });
   socket.on("trade:deleted", () => {
-    console.log("[socket] trade:deleted — triggering loadTrades");
     useAppStore.getState().loadTrades();
   });
 }
