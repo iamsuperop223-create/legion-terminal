@@ -260,11 +260,13 @@ export default function TradeModal({ trade, onSave, onClose }: Props) {
         pointsMissed: t.pointsMissed === "" || t.pointsMissed == null ? null : Number(t.pointsMissed),
         setupType: t.setupType || null,
       };
+      console.log("[TradeModal] submitting:", { isEdit: !!trade?.id, accountId: cleaned.accountId, symbol: cleaned.symbol, status: cleaned.status, missed: cleaned.missed, entryTime: cleaned.entryTime });
       if (trade?.id) {
         await updateTrade(trade.id, cleaned);
       } else {
         await createTrade(cleaned);
       }
+      console.log("[TradeModal] save succeeded, calling onSave");
       onSave();
     } catch (err: any) {
       console.error("Trade save failed:", err);

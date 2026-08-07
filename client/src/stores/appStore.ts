@@ -3,6 +3,8 @@ import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import type { TradingAccount, Trade, Rule, AttributeDefinition, JournalEntry, UserSettings } from "@/types";
 
+let _loadTradesInFlight: Promise<void> | null = null;
+
 interface AppState {
   // Accounts
   accounts: TradingAccount[];
@@ -89,24 +91,48 @@ export const useAppStore = create<AppState>((set, get) => ({
   trades: [],
 
   loadTrades: async () => {
-    const { activeAccountId } = get();
-    const { trades } = await api.getTrades(activeAccountId || undefined);
-    set({ trades: trades || [] });
+    if (_loadTradesInFlight) return _loadTradesInFlight;
+    _loadTradesInFlight = (async () => {
+      try {
+        const { activeAccountId } = get();
+        console.log("[store] loadTrades: fetching for accountId=", activeAccountId);
+        const { trades } = await api.getTrades(activeAccountId || undefined);
+        console.log("[store] loadTrades: received", trades?.length ?? 0, "trades");
+        set({ trades: trades || [] });
+      } catch (err) {
+        console.error("[store] loadTrades failed:", err);
+        throw err;
+      } finally {
+        _loadTradesInFlight = null;
+      }
+    })();
+    return _loadTradesInFlight;
   },
 
   createTrade: async (data) => {
-    await api.createTrade(data);
-    await get().loadTrades();
+    const { trade } = await api.createTrade(data);
+    console.log("[store] createTrade: server returned trade", trade?.id);
+    set((state) => ({
+      trades: [trade, ...state.trades.filter((t) => t.id !== trade.id)],
+    }));
+    get().loadTrades();
   },
 
   updateTrade: async (id, data) => {
-    await api.updateTrade(id, data);
-    await get().loadTrades();
+    const { trade } = await api.updateTrade(id, data);
+    console.log("[store] updateTrade: server returned trade", trade?.id);
+    set((state) => ({
+      trades: state.trades.map((t) => (t.id === id ? trade : t)),
+    }));
+    get().loadTrades();
   },
 
   deleteTrade: async (id) => {
     await api.deleteTrade(id);
-    await get().loadTrades();
+    set((state) => ({
+      trades: state.trades.filter((t) => t.id !== id),
+    }));
+    get().loadTrades();
   },
 
   bulkSetFee: async (fee) => {
@@ -212,7 +238,16 @@ export function setupSocketListeners() {
   const socket = getSocket();
   if (!socket) return;
 
-  socket.on("trade:created", () => useAppStore.getState().loadTrades());
-  socket.on("trade:updated", () => useAppStore.getState().loadTrades());
-  socket.on("trade:deleted", () => useAppStore.getState().loadTrades());
+  socket.on("trade:created", () => {
+    console.log("[socket] trade:created — triggering loadTrades");
+    useAppStore.getState().loadTrades();
+  });
+  socket.on("trade:updated", () => {
+    console.log("[socket] trade:updated — triggering loadTrades");
+    useAppStore.getState().loadTrades();
+  });
+  socket.on("trade:deleted", () => {
+    console.log("[socket] trade:deleted — triggering loadTrades");
+    useAppStore.getState().loadTrades();
+  });
 }

@@ -75,8 +75,10 @@ router.get("/", async (req: AuthRequest, res) => {
       orderBy: { entryTime: "desc" },
     });
 
+    console.log("[trades GET] userId=", req.userId, "accountId=", accountId || "ALL", "count=", trades.length);
     res.json({ trades: trades.map(serializeTrade) });
-  } catch {
+  } catch (err: any) {
+    console.error("[trades GET] Error:", err.message);
     res.status(500).json({ error: "Failed to fetch trades" });
   }
 });
@@ -116,6 +118,7 @@ router.get("/:id", async (req: AuthRequest, res) => {
 // Create trade
 router.post("/", async (req: AuthRequest, res) => {
   try {
+    console.log("[trades POST] userId=", req.userId, "body keys=", Object.keys(req.body || {}));
     const data = tradeSchema.parse(req.body);
     const prisma = req.prisma;
 
@@ -123,6 +126,7 @@ router.post("/", async (req: AuthRequest, res) => {
       where: { id: data.accountId, userId: req.userId },
     });
     if (!account) {
+      console.log("[trades POST] Account not found:", data.accountId, "for userId:", req.userId);
       res.status(404).json({ error: "Account not found" });
       return;
     }
@@ -159,10 +163,12 @@ router.post("/", async (req: AuthRequest, res) => {
       include: { attributeValues: true },
     });
 
+    console.log("[trades POST] Created trade:", trade.id, trade.symbol, trade.status);
     (req as any).io?.to(`user:${req.userId}`).emit("trade:created", serializeTrade(trade));
 
     res.status(201).json({ trade: serializeTrade(trade) });
   } catch (err: any) {
+    console.error("[trades POST] Error:", err.message, err instanceof z.ZodError ? err.errors : "");
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validation failed", details: err.errors });
       return;
